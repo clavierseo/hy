@@ -1,0 +1,383 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>신나는 3D 물감 놀이!</title>
+    <style>
+        /* 폰트 및 기본 설정 */
+        @import url('https://fonts.googleapis.com/css2?family=Jua&display=swap');
+        body { margin: 0; overflow: hidden; background: #87CEEB; font-family: 'Jua', cursive; touch-action: none; user-select: none; }
+
+        /* UI 컨테이너: 더 장난감 같고 둥글게 */
+        #ui-container { 
+            position: absolute; bottom: 15px; left: 50%; transform: translateX(-50%); 
+            width: 92%; max-width: 680px; 
+            background: rgba(255, 255, 255, 0.85); 
+            padding: 20px 15px; border-radius: 35px; 
+            box-shadow: 0 10px 30px rgba(0,100,200,0.2);
+            display: flex; flex-direction: column; align-items: center; z-index: 100;
+            border: 5px solid #FFD700; /* 노란색 테두리 */
+        }
+
+        /* 안내 문구 */
+        .info { font-size: 1.4rem; color: #333; text-align: center; margin-bottom: 15px; text-shadow: 1px 1px 2px white; }
+        .highlight { color: #FF4500; font-weight: bold; }
+
+        /* 팔레트 영역 */
+        .palette { display: flex; flex-wrap: wrap; gap: 12px; justify-content: center; margin-bottom: 15px; }
+        
+        /* 물감 버튼: 크고 젤리처럼 */
+        .color-drop { 
+            width: 45px; height: 45px; border-radius: 50%; 
+            border: 4px solid white; 
+            cursor: pointer; box-shadow: 0 5px 10px rgba(0,0,0,0.1); 
+            transition: transform 0.1s cubic-bezier(0.175, 0.885, 0.32, 1.275); /* 팅기는 효과 */
+            box-sizing: border-box;
+        }
+        .color-drop:active { transform: scale(0.9); } /* 누를 때 작아짐 */
+        .color-drop.active { border-color: #FFD700; transform: scale(1.15); box-shadow: 0 0 15px #FFD700; }
+        
+        /* 전체 초기화 버튼: 크고 빨간 버튼 */
+        .reset-all-btn { 
+            background-color: #FF6347; color: white; border: none; 
+            padding: 12px 30px; border-radius: 25px; font-size: 1.2rem;
+            cursor: pointer; font-family: 'Jua', cursive;
+            box-shadow: 0 5px #c0392b; transition: all 0.1s;
+        }
+        .reset-all-btn:active { transform: translateY(4px); box-shadow: 0 1px #c0392b; }
+
+        /* 비커별 정보 및 리셋 버튼 (아이콘화) */
+        .beaker-label { 
+            position: absolute; font-size: 14px; color: #333; text-align: center; font-weight: bold;
+            bottom: -25px; width: 120px; pointer-events: none; opacity: 0.8;
+            transform: translateX(-50%) translateY(-55px); text-shadow: 1px 1px 1px white;
+        }
+        .beaker-reset-btn {
+            position: absolute; bottom: -55px; width: 20px; height: 20px;
+            background-color: #87CEFA; color: white; border: 3px solid white; border-radius: 50%;
+            cursor: pointer; font-size: 20px; display: flex; justify-content: center; align-items: center;
+            box-shadow: 0 3px 8px rgba(0,0,0,0.2); transition: transform 0.1s;
+            transform: translateX(-50%); opacity: 0.9;
+        }
+        .beaker-reset-btn:active { transform: translateX(-50%) scale(0.9); background-color: #FF6347;}
+        .beaker-group:hover .beaker-label, .beaker-group:hover .beaker-reset-btn { opacity: 1; }
+
+    </style>
+</head>
+<body>
+
+<audio id="sfx-pop" src="https://assets.mixkit.co/active_storage/sfx/2578/2578-preview.m4a"></audio>
+<audio id="sfx-splash" src="https://assets.mixkit.co/active_storage/sfx/112/112-preview.m4a"></audio>
+<audio id="sfx-whoosh" src="https://assets.mixkit.co/active_storage/sfx/1472/1472-preview.m4a"></audio>
+
+
+<div id="ui-container">
+    <div class="info" id="status">원하는 색깔을 <span class="highlight">콕!</span> 선택해봐! 하윤!</div>
+    <div class="palette" id="palette"></div>
+    <button class="reset-all-btn" id="resetAllBtn">✨ 모두 깨끗하게 비우기 ✨</button>
+</div>
+
+<script type="importmap">
+    { "imports": { 
+        "three": "https://unpkg.com/three@0.160.0/build/three.module.js",
+        "three/addons/": "https://unpkg.com/three@0.160.0/examples/jsm/"
+    } }
+</script>
+
+<script type="module">
+    import * as THREE from 'three';
+    import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
+
+    // --- 효과음 플레이어 ---
+    const sfxPop = document.getElementById('sfx-pop');
+    const sfxSplash = document.getElementById('sfx-splash');
+    const sfxWhoosh = document.getElementById('sfx-whoosh');
+    sfxSplash.volume = 0.6; // 물소리 볼륨 조절
+
+    function playSound(sound) {
+        sound.currentTime = 0;
+        sound.play().catch(() => {}); // 자동 재생 차단 예외 처리
+    }
+
+    // --- 엔진 설정 (밝고 화사하게) ---
+    const scene = new THREE.Scene();
+    scene.background = new THREE.Color(0x87CEEB); // 하늘색 배경
+    scene.fog = new THREE.FogExp2(0x87CEEB, 0.02); // 부드러운 안개
+
+    const camera = new THREE.PerspectiveCamera(55, window.innerWidth / window.innerHeight, 0.1, 1000);
+    camera.position.set(0, 7, 18); 
+
+    const renderer = new THREE.WebGLRenderer({ antialias: true });
+    renderer.setSize(window.innerWidth, window.innerHeight);
+    renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2)); // 모바일 최적화
+    renderer.shadowMap.enabled = true; // 그림자 켜기
+    document.body.appendChild(renderer.domElement);
+
+    const controls = new OrbitControls(camera, renderer.domElement);
+    controls.enableDamping = true;
+    controls.dampingFactor = 0.08;
+    controls.maxPolarAngle = Math.PI / 1.7;
+    controls.minDistance = 8;
+    controls.maxDistance = 30;
+    // controls.autoRotate = true; controls.autoRotateSpeed = 0.5; // 살짝 자동 회전 (선택)
+
+    // --- 조명 (따뜻하고 밝은 햇살) ---
+    scene.add(new THREE.AmbientLight(0xffffff, 0.7)); 
+
+    const sunLight = new THREE.DirectionalLight(0xFFD700, 1.2); // 따뜻한 햇살
+    sunLight.position.set(10, 20, 10);
+    sunLight.castShadow = true;
+    sunLight.shadow.mapSize.width = 2048;
+    sunLight.shadow.mapSize.height = 2048;
+    scene.add(sunLight);
+
+    const skyLight = new THREE.HemisphereLight(0xffffff, 0x87CEEB, 0.6);
+    scene.add(skyLight);
+
+    // --- 환경 (동화 같은 동산) ---
+    // 바닥 (잔디 느낌)
+    const planeGeo = new THREE.PlaneGeometry(200, 200);
+    const planeMat = new THREE.MeshStandardMaterial({ color: 0x90EE90, roughness: 0.9 });
+    const plane = new THREE.Mesh(planeGeo, planeMat);
+    plane.rotation.x = -Math.PI / 2;
+    plane.position.y = -4;
+    plane.receiveShadow = true;
+    scene.add(plane);
+
+    // 선반 (나무 느낌)
+    function createShelf(y) {
+        const geo = new THREE.BoxGeometry(17, 0.4, 4);
+        const mat = new THREE.MeshStandardMaterial({ color: 0xDEB887, roughness: 0.6 });
+        const shelf = new THREE.Mesh(geo, mat);
+        shelf.position.y = y - 1.5;
+        shelf.receiveShadow = true;
+        shelf.castShadow = true;
+        scene.add(shelf);
+    }
+    createShelf(0); 
+    createShelf(5); 
+
+    // --- 변수 및 데이터 ---
+    let selectedColorData = null;
+    const beakers = [];
+    // 더 밝고 선명한 16색 팔레트
+    const colors = [
+        {r:255, g:0, b:0}, {r:255, g:165, b:0}, {r:255, g:255, b:0}, {r:50, g:205, b:50},
+        {r:0, g:191, b:255}, {r:0, g:0, b:255}, {r:138, g:43, b:226}, {r:255, g:20, b:147},
+        {r:255, g:105, b:180}, {r:0, g:255, b:255}, {r:124, g:252, b:0}, {r:255, g:215, b:0},
+        {r:255, g:127, b:80}, {r:186, g:85, b:211}, {r:64, g:224, b:208}, {r:255, g:99, b:71}
+    ];
+    const MAX_DROPS = 100;
+
+    // --- 비커 재질 (투명하고 반짝이게) ---
+    const glassMaterial = new THREE.MeshPhongMaterial({
+        color: 0xffffff, opacity: 0.15, transparent: true, shininess: 100,
+        side: THREE.DoubleSide, depthWrite: false
+    });
+    const rimMaterial = new THREE.MeshStandardMaterial({ color: 0x444444, roughness: 0.5 }); 
+
+    // --- 비커 생성 ---
+    const beakerBodyGeo = new THREE.CylinderGeometry(1, 0.95, 3, 32, 1, true);
+    const beakerBottomGeo = new THREE.CircleGeometry(0.95, 32);
+    const rimGeo = new THREE.TorusGeometry(1.0, 0.04, 16, 48);
+
+    for (let i = 0; i < 10; i++) {
+        const beakerGroup = new THREE.Group();
+        beakerGroup.add(new THREE.Mesh(beakerBodyGeo, glassMaterial));
+        const bottom = new THREE.Mesh(beakerBottomGeo, glassMaterial);
+        bottom.rotation.x = -Math.PI / 2; bottom.position.y = -1.5; beakerGroup.add(bottom);
+        const topRim = new THREE.Mesh(rimGeo, rimMaterial);
+        topRim.rotation.x = Math.PI / 2; topRim.position.y = 1.5; beakerGroup.add(topRim);
+        const bottomRim = new THREE.Mesh(rimGeo, rimMaterial);
+        bottomRim.rotation.x = Math.PI / 2; bottomRim.position.y = -1.5; bottomRim.scale.set(0.95, 0.95, 1); beakerGroup.add(bottomRim);
+
+        // 내부 액체 (스스로 빛나게 Emissive 추가)
+        const liqGeo = new THREE.CylinderGeometry(0.92, 0.88, 2.9, 32);
+        liqGeo.translate(0, 1.45, 0); 
+        const liqMat = new THREE.MeshStandardMaterial({ 
+            color: 0xffffff, transparent: true, opacity: 0, roughness: 0.1,
+            emissive: 0x000000, emissiveIntensity: 0.4
+        });
+        const liquid = new THREE.Mesh(liqGeo, liqMat);
+        liquid.position.y = -1.45; liquid.scale.y = 0.001; 
+        beakerGroup.add(liquid);
+
+        // UI 요소 (라벨 및 쓰레기통 버튼)
+        const labelDiv = document.createElement('div');
+        labelDiv.className = 'beaker-label beaker-group';
+        labelDiv.innerText = `텅 비었음`;
+        document.body.appendChild(labelDiv); 
+
+        const resetButton = document.createElement('button');
+        resetButton.className = 'beaker-reset-btn beaker-group';
+        resetButton.innerHTML = '🗑️'; // 쓰레기통 이모지
+        resetButton.onclick = (e) => {
+             e.stopPropagation(); 
+             playSound(sfxWhoosh); // 비우기 소리
+             resetBeaker(beakerGroup);
+        };
+        document.body.appendChild(resetButton); 
+
+        // 배치
+        const isTopRow = i >= 5; const col = i % 5;
+        beakerGroup.position.x = (col - 2) * 3.2;
+        beakerGroup.position.y = isTopRow ? 5 : 0;
+        beakerGroup.castShadow = true;
+        
+        // 애니메이션을 위한 초기 회전값 저장
+        beakerGroup.userData = { 
+            id: i, drops: [], liquidMesh: liquid, labelDiv: labelDiv, resetButton: resetButton,
+            initialRotation: beakerGroup.rotation.clone(),
+            wobbleNeed: false
+        };
+        scene.add(beakerGroup);
+        beakers.push(beakerGroup);
+        updateBeakerUIPosition(beakerGroup);
+    }
+
+    function updateBeakerUIPosition(beakerGroup) {
+        const vector = new THREE.Vector3();
+        beakerGroup.localToWorld(vector.set(0, -1.8, 0)); 
+        vector.project(camera); 
+        const x = (vector.x * 0.5 + 0.5) * window.innerWidth;
+        const y = (-vector.y * 0.5 + 0.5) * window.innerHeight;
+        beakerGroup.userData.labelDiv.style.left = `${x}px`; beakerGroup.userData.labelDiv.style.top = `${y}px`;
+        beakerGroup.userData.resetButton.style.left = `${x}px`; beakerGroup.userData.resetButton.style.top = `${y}px`;
+    }
+
+    // --- 색상 섞기 엔진 ---
+    function getMixedColor(drops) {
+        if (drops.length === 0) return { r: 1, g: 1, b: 1, a: 0 }; 
+        let c=0, m=0, y=0, k=0, waterCount=0, colorCount=0;
+        drops.forEach(d => {
+            if (d.isWater) waterCount++;
+            else {
+                let r=d.r/255, g=d.g/255, b=d.b/255, kk=1-Math.max(r,g,b);
+                c+=(1-r-kk)/(1-kk||1); m+=(1-g-kk)/(1-kk||1); y+=(1-b-kk)/(1-kk||1); k+=kk; colorCount++;
+            }
+        });
+        if (drops.length === 0) return { r:1, g:1, b:1, a:0 };
+        const avgC=colorCount>0?c/colorCount:0, avgM=colorCount>0?m/colorCount:0, avgY=colorCount>0?y/colorCount:0, avgK=colorCount>0?k/colorCount:0;
+        let fR=(1-avgC)*(1-avgK), fG=(1-avgM)*(1-avgK), fB=(1-avgY)*(1-avgK);
+        const wInf = waterCount/drops.length;
+        fR+= (1-fR)*wInf*0.6; fG+= (1-fG)*wInf*0.6; fB+= (1-fB)*wInf*0.6;
+        const op = Math.min(0.85 + (colorCount/drops.length)*0.13, 0.98);
+        return { r:fR, g:fG, b:fB, a:op };
+    }
+
+    function resetBeaker(beakerGroup) {
+        const data = beakerGroup.userData;
+        data.drops = [];
+        data.liquidMesh.material.color.setRGB(1, 1, 1);
+        data.liquidMesh.material.emissive.setHex(0x000000);
+        data.liquidMesh.material.opacity = 0;
+        data.liquidMesh.scale.y = 0.001;
+        data.labelDiv.innerText = `텅 비었음`;
+        status.innerHTML = "깨끗해졌다! 다시 시작해볼까? ✨";
+    }
+
+    document.getElementById('resetAllBtn').onclick = () => {
+        playSound(sfxWhoosh);
+        beakers.forEach(b => resetBeaker(b));
+        status.innerHTML = "모두 다 깨끗하게! 반짝반짝! ✨하윤!"   ;
+    };
+
+    // --- UI 및 상호작용 ---
+    const palette = document.getElementById('palette');
+    const status = document.getElementById('status');
+
+    function createColorBtn(col, isWater = false) {
+        const btn = document.createElement('div');
+        btn.className = 'color-drop';
+        btn.style.backgroundColor = `rgb(${col.r},${col.g},${col.b})`;
+        if (isWater) btn.style.background = 'radial-gradient(circle at 30% 30%, #ffffff, #87CEFA)';
+        btn.onpointerdown = () => {
+            playSound(sfxPop); // 팝 소리
+            document.querySelectorAll('.color-drop').forEach(b => b.classList.remove('active'));
+            btn.classList.add('active');
+            selectedColorData = { ...col, isWater };
+            status.innerHTML = isWater ? "투명한 <span class='highlight' style='color:#87CEFA'>물</span> 선택! 색이 연해질 거야." : "이제 비커에 <span class='highlight'>첨벙!</span> 넣어봐!";
+        };
+        palette.appendChild(btn);
+    }
+
+    colors.forEach(c => createColorBtn(c));
+    createColorBtn({r:255, g:255, b:255}, true); 
+
+    const raycaster = new THREE.Raycaster();
+    const mouse = new THREE.Vector2();
+
+    window.addEventListener('pointerdown', (e) => {
+        if (e.target.closest('#ui-container') || e.target.closest('.beaker-reset-btn')) return;
+        if (!selectedColorData) {
+            status.innerHTML = "먼저 <span class='highlight'>색깔 버튼</span>을 눌러줘!"; 
+            return;
+        }
+
+        mouse.x = (e.clientX / window.innerWidth) * 2 - 1;
+        mouse.y = -(e.clientY / window.innerHeight) * 2 + 1;
+        raycaster.setFromCamera(mouse, camera);
+
+        const intersects = raycaster.intersectObjects(beakers, true);
+        if (intersects.length > 0) {
+            let targetGroup = intersects[0].object;
+            while(targetGroup && !targetGroup.userData.drops) targetGroup = targetGroup.parent;
+
+            if (targetGroup && targetGroup.userData.drops) {
+                const data = targetGroup.userData;
+                if (data.drops.length < MAX_DROPS) {
+                    playSound(sfxSplash); // 첨벙 소리
+                    // 비커 흔들림 효과 시작
+                    data.wobbleNeed = true; wobbleStartTime = Date.now();
+
+                    data.drops.push({ ...selectedColorData });
+                    const mixed = getMixedColor(data.drops);
+                    data.liquidMesh.material.color.setRGB(mixed.r, mixed.g, mixed.b);
+                    data.liquidMesh.material.emissive.setRGB(mixed.r*0.5, mixed.g*0.5, mixed.b*0.5);
+                    data.liquidMesh.material.opacity = mixed.a;
+                    data.liquidMesh.scale.y = data.drops.length / MAX_DROPS;
+                    data.labelDiv.innerText = `${data.drops.length} 방울!`;
+                    status.innerHTML = `잘했어! <span class='highlight'>${data.drops.length}방울</span> 섞었네!`;
+                } else {
+                    status.innerHTML = "어라? 비커가 꽉 찼네! 😲 비우고 다시 하자!";
+                }
+            }
+        }
+    });
+
+    // --- 애니메이션 루프 (비커 흔들림 추가) ---
+    let wobbleStartTime = 0;
+    function animate() {
+        requestAnimationFrame(animate);
+        controls.update();
+        
+        // 비커 흔들림 애니메이션 처리
+        const now = Date.now();
+        beakers.forEach(b => {
+            if(b.userData.wobbleNeed) {
+                const elapsed = now - wobbleStartTime;
+                if (elapsed < 300) { // 0.3초 동안 흔들림
+                    const intensity = 0.05 * (1 - elapsed / 300);
+                    b.rotation.x = b.userData.initialRotation.x + Math.sin(elapsed * 0.05) * intensity;
+                    b.rotation.z = b.userData.initialRotation.z + Math.cos(elapsed * 0.05) * intensity;
+                } else {
+                    b.rotation.copy(b.userData.initialRotation); // 원위치
+                    b.userData.wobbleNeed = false;
+                }
+            }
+            updateBeakerUIPosition(b);
+        });
+
+        renderer.render(scene, camera);
+    }
+    animate();
+
+    window.addEventListener('resize', () => {
+        camera.aspect = window.innerWidth / window.innerHeight;
+        camera.updateProjectionMatrix();
+        renderer.setSize(window.innerWidth, window.innerHeight);
+    });
+</script>
+</body>
+</html>
