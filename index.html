@@ -114,32 +114,42 @@
     scene.fog = new THREE.FogExp2(0x87CEEB, 0.02);
 
     const camera = new THREE.PerspectiveCamera(50, window.innerWidth / window.innerHeight, 0.1, 1000);
-    const aspect = window.innerWidth / window.innerHeight;
-    const initialZ = aspect < 1 ? 23 : 18; 
     
-    // [수정] 카메라 높이를 6 -> 8로 올려서 전체적으로 위에서 보게 조정
-    camera.position.set(0, 8, initialZ);
+    // [반응형 카메라 위치 설정 함수]
+    // 화면 비율에 따라 카메라 거리를 조절하여 항상 모든 비커가 보이게 함
+    function fitCamera() {
+        const aspect = window.innerWidth / window.innerHeight;
+        // 세로가 긴 화면(모바일)일수록 더 멀리(Z값을 크게) 잡음
+        // 기본 23에서 비율에 따라 더 멀어지게 계산
+        const distance = aspect < 1 ? 26 / aspect : 22; 
+        
+        camera.position.set(0, 8, distance);
+        camera.updateProjectionMatrix();
+    }
 
     const renderer = new THREE.WebGLRenderer({ antialias: true });
     renderer.setSize(window.innerWidth, window.innerHeight);
     renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
     renderer.shadowMap.enabled = true;
     renderer.outputColorSpace = THREE.SRGBColorSpace; 
-    
     document.body.appendChild(renderer.domElement);
 
     const controls = new OrbitControls(camera, renderer.domElement);
     controls.enableDamping = true;
     controls.maxPolarAngle = Math.PI / 1.7; 
     controls.minDistance = 10;
-    controls.maxDistance = 35;
+    controls.maxDistance = 45;
     
-    // [수정] 카메라가 바라보는 중심점을 y=2 -> y=4.5로 올림 (화면 전체 위로 이동 효과)
-    controls.target.set(0, 4.5, 0);
+    // ★ [핵심] 카메라 타겟을 비커 위치보다 아래로(Y=3.5) 설정
+    // 이렇게 하면 카메라가 아래를 보게 되어, 비커들은 화면의 '위쪽'에 배치됨
+    // 즉, 아래쪽 UI 공간을 확보하는 효과!
+    controls.target.set(0, 3.5, 0); 
+
+    // 초기 카메라 위치 설정 실행
+    fitCamera();
 
     // --- 조명 ---
     scene.add(new THREE.AmbientLight(0xffffff, 0.5)); 
-    
     const sunLight = new THREE.DirectionalLight(0xFFFFFF, 1.0); 
     sunLight.position.set(5, 15, 10);
     sunLight.castShadow = true;
@@ -158,18 +168,19 @@
         const geo = new THREE.BoxGeometry(13, 0.3, 3.5);
         const mat = new THREE.MeshStandardMaterial({ color: 0xDEB887, roughness: 0.6 });
         const shelf = new THREE.Mesh(geo, mat);
-        // 비커 받침대 위치 조정
         shelf.position.y = y - 1.4; 
         shelf.receiveShadow = true;
         shelf.castShadow = true;
         scene.add(shelf);
     }
     
-    // [수정] 선반 높이 대폭 상향 조정 (하단 UI 가림 방지)
-    // 1층: 0 -> 2.5
-    // 2층: 4.5 -> 7.0
-    createShelf(2.5); 
-    createShelf(7.0); 
+    // [배치 상향] 선반 높이를 더 높게 잡음
+    // 1층: 3.5 (UI 위로 완전히 띄움)
+    // 2층: 8.5
+    const Y_BOTTOM_ROW = 3.5;
+    const Y_TOP_ROW = 8.5;
+    createShelf(Y_BOTTOM_ROW); 
+    createShelf(Y_TOP_ROW); 
 
     // --- 색상 데이터 ---
     const PIGMENTS = {
@@ -235,13 +246,8 @@
         topRim.rotation.x = Math.PI / 2; topRim.position.y = 1.6; beakerGroup.add(topRim);
 
         const liqMat = new THREE.MeshStandardMaterial({ 
-            color: 0xffffff, 
-            transparent: true, 
-            opacity: 0.96, 
-            roughness: 0.25, 
-            metalness: 0.0,
-            emissive: 0x000000, 
-            emissiveIntensity: 0.15 
+            color: 0xffffff, transparent: true, opacity: 0.96, roughness: 0.25, metalness: 0.0,
+            emissive: 0x000000, emissiveIntensity: 0.15 
         });
         const liquid = new THREE.Mesh(liquidGeoRaw, liqMat);
         liquid.position.y = -1.58; 
@@ -261,10 +267,10 @@
         uiGroup.appendChild(label); uiGroup.appendChild(btn);
         document.body.appendChild(uiGroup); 
 
-        // [수정] 비커 배치 Y좌표 상향 (2.5, 7.0)
+        // [배치 적용] 상단 상수값 적용
         const isTopRow = i >= 4; const col = i % 4;
         beakerGroup.position.x = (col - 1.5) * 2.8; 
-        beakerGroup.position.y = isTopRow ? 7.0 : 2.5;
+        beakerGroup.position.y = isTopRow ? Y_TOP_ROW : Y_BOTTOM_ROW;
         
         beakerGroup.userData = { 
             id: i, drops: [], liquidMesh: liquid, uiGroup: uiGroup, label: label,
@@ -280,36 +286,20 @@
         
         let sumC = 0, sumM = 0, sumY = 0, sumK = 0;
         let waterCount = 0;
-        
         drops.forEach(d => {
             const p = PIGMENTS[d.id];
             if (p.isWater) waterCount++;
-            else {
-                sumC += p.c; sumM += p.m; sumY += p.y; sumK += p.k;
-            }
+            else { sumC += p.c; sumM += p.m; sumY += p.y; sumK += p.k; }
         });
 
         const totalDrops = drops.length;
-        const c = sumC / totalDrops;
-        const m = sumM / totalDrops;
-        const y = sumY / totalDrops;
-        const k = sumK / totalDrops;
-
-        let r = 255 * (1 - c) * (1 - k);
-        let g = 255 * (1 - m) * (1 - k);
-        let b = 255 * (1 - y) * (1 - k);
-
-        r = Math.max(0, Math.min(255, r)) / 255;
-        g = Math.max(0, Math.min(255, g)) / 255;
-        b = Math.max(0, Math.min(255, b)) / 255;
+        const c = sumC / totalDrops; const m = sumM / totalDrops; const y = sumY / totalDrops; const k = sumK / totalDrops;
+        let r = 255 * (1 - c) * (1 - k); let g = 255 * (1 - m) * (1 - k); let b = 255 * (1 - y) * (1 - k);
+        r = Math.max(0, Math.min(255, r)) / 255; g = Math.max(0, Math.min(255, g)) / 255; b = Math.max(0, Math.min(255, b)) / 255;
 
         let op;
         if (sumC+sumM+sumY+sumK === 0 && waterCount > 0) op = 0.25; 
-        else {
-            const pigmentRatio = (totalDrops - waterCount) / totalDrops; 
-            op = 0.8 + (pigmentRatio * 0.2); 
-        }
-
+        else { const pigmentRatio = (totalDrops - waterCount) / totalDrops; op = 0.8 + (pigmentRatio * 0.2); }
         return { r: r, g: g, b: b, a: op };
     }
 
@@ -381,7 +371,6 @@
                     data.drops.push({ ...selectedColorData });
                     
                     const mixed = getMixedColor(data.drops);
-                    
                     data.liquidMesh.material.color.setRGB(mixed.r, mixed.g, mixed.b);
                     data.liquidMesh.material.emissive.setRGB(mixed.r, mixed.g, mixed.b);
                     data.liquidMesh.material.opacity = mixed.a;
@@ -389,7 +378,6 @@
                     const fillRatio = data.drops.length / MAX_DROPS;
                     data.liquidMesh.scale.y = Math.max(0.15, fillRatio); 
                     data.label.innerText = `${data.drops.length}`;
-                    
                     status.innerText = "잘했어! 하윤!";
                 } else {
                     status.innerText = "가득 찼어!";
@@ -423,6 +411,8 @@
         camera.aspect = window.innerWidth / window.innerHeight;
         camera.updateProjectionMatrix();
         renderer.setSize(window.innerWidth, window.innerHeight);
+        // 화면 크기 바뀔 때마다 카메라 거리 재조정
+        fitCamera();
     });
 </script>
 </body>
