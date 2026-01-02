@@ -116,7 +116,9 @@
     const camera = new THREE.PerspectiveCamera(50, window.innerWidth / window.innerHeight, 0.1, 1000);
     const aspect = window.innerWidth / window.innerHeight;
     const initialZ = aspect < 1 ? 23 : 18; 
-    camera.position.set(0, 6, initialZ);
+    
+    // [수정] 카메라 높이를 6 -> 8로 올려서 전체적으로 위에서 보게 조정
+    camera.position.set(0, 8, initialZ);
 
     const renderer = new THREE.WebGLRenderer({ antialias: true });
     renderer.setSize(window.innerWidth, window.innerHeight);
@@ -131,10 +133,11 @@
     controls.maxPolarAngle = Math.PI / 1.7; 
     controls.minDistance = 10;
     controls.maxDistance = 35;
-    controls.target.set(0, 2, 0);
+    
+    // [수정] 카메라가 바라보는 중심점을 y=2 -> y=4.5로 올림 (화면 전체 위로 이동 효과)
+    controls.target.set(0, 4.5, 0);
 
-    // --- 조명 (부드럽게 조정) ---
-    // Ambient를 낮춰서 그림자를 살리고, Directional은 흰색으로 깔끔하게
+    // --- 조명 ---
     scene.add(new THREE.AmbientLight(0xffffff, 0.5)); 
     
     const sunLight = new THREE.DirectionalLight(0xFFFFFF, 1.0); 
@@ -144,7 +147,6 @@
 
     // --- 바닥 ---
     const planeGeo = new THREE.PlaneGeometry(200, 200);
-    // 바닥 색을 조금 더 차분한 풀색으로 (물감 색 간섭 최소화)
     const planeMat = new THREE.MeshStandardMaterial({ color: 0x7CAE7C, roughness: 0.8 });
     const plane = new THREE.Mesh(planeGeo, planeMat);
     plane.rotation.x = -Math.PI / 2;
@@ -156,27 +158,31 @@
         const geo = new THREE.BoxGeometry(13, 0.3, 3.5);
         const mat = new THREE.MeshStandardMaterial({ color: 0xDEB887, roughness: 0.6 });
         const shelf = new THREE.Mesh(geo, mat);
+        // 비커 받침대 위치 조정
         shelf.position.y = y - 1.4; 
         shelf.receiveShadow = true;
         shelf.castShadow = true;
         scene.add(shelf);
     }
-    createShelf(0); 
-    createShelf(4.5); 
+    
+    // [수정] 선반 높이 대폭 상향 조정 (하단 UI 가림 방지)
+    // 1층: 0 -> 2.5
+    // 2층: 4.5 -> 7.0
+    createShelf(2.5); 
+    createShelf(7.0); 
 
-    // --- 색상 데이터 (가중치 & RGB 튜닝) ---
-    // [중요] 사용자가 "너무 밝다"고 느껴서, 기본 RGB 값을 더 진하게(Darker) 설정함.
+    // --- 색상 데이터 ---
     const PIGMENTS = {
-        red:    { c:0.0, m:0.95, y:0.95, k:0.05 }, // Black을 살짝 섞어 깊이감 추가
-        orange: { c:0.0, m:0.60, y:1.00, k:0.0 },  // Magenta 높여서 더 붉은 주황으로
+        red:    { c:0.0, m:0.95, y:0.95, k:0.05 }, 
+        orange: { c:0.0, m:0.60, y:1.00, k:0.0 }, 
         yellow: { c:0.0, m:0.00, y:1.00, k:0.0 },
-        green:  { c:0.9, m:0.00, y:0.90, k:0.15 }, // Cyan, Black 높여서 진한 초록으로
+        green:  { c:0.9, m:0.00, y:0.90, k:0.15 },
         mint:   { c:0.4, m:0.00, y:0.30, k:0.0 },
         sky:    { c:0.6, m:0.10, y:0.00, k:0.0 },
-        blue:   { c:1.0, m:0.60, y:0.00, k:0.1 },  // Black 살짝 섞어 무게감 추가
+        blue:   { c:1.0, m:0.60, y:0.00, k:0.1 }, 
         navy:   { c:1.0, m:0.90, y:0.20, k:0.4 },
-        purple: { c:0.6, m:0.90, y:0.00, k:0.1 },  // Black 살짝 섞어 진한 보라
-        pink:   { c:0.0, m:0.50, y:0.05, k:0.0 },  // Magenta 높여서 진한 핑크
+        purple: { c:0.6, m:0.90, y:0.00, k:0.1 }, 
+        pink:   { c:0.0, m:0.50, y:0.05, k:0.0 }, 
         brown:  { c:0.3, m:0.65, y:0.90, k:0.4 },
         grey:   { c:0.0, m:0.00, y:0.00, k:0.6 },
         black:  { c:0.0, m:0.00, y:0.00, k:1.0 },
@@ -184,18 +190,17 @@
         water:  { c:0.0, m:0.00, y:0.00, k:0.0, isWater: true }
     };
 
-    // 화면 표시용 RGB 색상 (조명 받았을 때 날아가지 않게 원색보다 조금 어둡게 세팅)
     const colors = [
-        { r:200, g:0, b:0,     id: 'red' },      // 255->200 (진한 빨강)
-        { r:255, g:120, b:0,   id: 'orange' },   // 붉은기 도는 주황
-        { r:255, g:210, b:0,   id: 'yellow' },   // 개나리색 노랑
+        { r:200, g:0, b:0,     id: 'red' },      
+        { r:255, g:120, b:0,   id: 'orange' },   
+        { r:255, g:210, b:0,   id: 'yellow' },   
         { r:124, g:252, b:0,   id: 'mint' },
-        { r:0, g:140, b:0,     id: 'green' },    // 0,180,0 -> 0,140,0 (진한 초록)
+        { r:0, g:140, b:0,     id: 'green' },    
         { r:0, g:191, b:255,   id: 'sky' },
-        { r:0, g:0, b:180,     id: 'blue' },     // 0,0,255 -> 0,0,180 (진한 파랑)
+        { r:0, g:0, b:180,     id: 'blue' },     
         { r:25, g:25, b:112,   id: 'navy' },
-        { r:128, g:0, b:128,   id: 'purple' },   // 진한 보라
-        { r:255, g:20, b:147,  id: 'pink' },     // 핫핑크
+        { r:128, g:0, b:128,   id: 'purple' },   
+        { r:255, g:20, b:147,  id: 'pink' },     
         { r:139, g:69, b:19,   id: 'brown' },
         { r:100, g:100, b:100, id: 'grey' },
         { r:20, g:20, b:20,    id: 'black' },
@@ -229,17 +234,14 @@
         const topRim = new THREE.Mesh(rimGeo, rimMaterial);
         topRim.rotation.x = Math.PI / 2; topRim.position.y = 1.6; beakerGroup.add(topRim);
 
-        // ★ [핵심 수정] 액체 재질 - Emissive 대폭 감소 ★
-        // emissiveIntensity를 0.4 -> 0.15로 줄여서 "발광"이 아닌 "색상 유지" 정도로만 사용
-        // Roughness를 0.2로 주어 "젖은 물감"의 반질반질한 느낌 추가
         const liqMat = new THREE.MeshStandardMaterial({ 
             color: 0xffffff, 
             transparent: true, 
-            opacity: 0.96, // 거의 불투명하게
-            roughness: 0.25, // 적당한 반사광 (젖은 느낌)
+            opacity: 0.96, 
+            roughness: 0.25, 
             metalness: 0.0,
             emissive: 0x000000, 
-            emissiveIntensity: 0.15 // 빛을 아주 살짝만 내뿜음 (색 왜곡 방지)
+            emissiveIntensity: 0.15 
         });
         const liquid = new THREE.Mesh(liquidGeoRaw, liqMat);
         liquid.position.y = -1.58; 
@@ -259,9 +261,10 @@
         uiGroup.appendChild(label); uiGroup.appendChild(btn);
         document.body.appendChild(uiGroup); 
 
+        // [수정] 비커 배치 Y좌표 상향 (2.5, 7.0)
         const isTopRow = i >= 4; const col = i % 4;
         beakerGroup.position.x = (col - 1.5) * 2.8; 
-        beakerGroup.position.y = isTopRow ? 4.5 : 0;
+        beakerGroup.position.y = isTopRow ? 7.0 : 2.5;
         
         beakerGroup.userData = { 
             id: i, drops: [], liquidMesh: liquid, uiGroup: uiGroup, label: label,
@@ -304,7 +307,7 @@
         if (sumC+sumM+sumY+sumK === 0 && waterCount > 0) op = 0.25; 
         else {
             const pigmentRatio = (totalDrops - waterCount) / totalDrops; 
-            op = 0.8 + (pigmentRatio * 0.2); // 색이 있으면 좀 더 불투명하게 (0.8~1.0)
+            op = 0.8 + (pigmentRatio * 0.2); 
         }
 
         return { r: r, g: g, b: b, a: op };
@@ -379,9 +382,7 @@
                     
                     const mixed = getMixedColor(data.drops);
                     
-                    // 색상 적용
                     data.liquidMesh.material.color.setRGB(mixed.r, mixed.g, mixed.b);
-                    // Emissive도 색상을 따라가되 강도를 아주 약하게 (0.15)
                     data.liquidMesh.material.emissive.setRGB(mixed.r, mixed.g, mixed.b);
                     data.liquidMesh.material.opacity = mixed.a;
 
