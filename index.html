@@ -1,419 +1,1680 @@
 <!DOCTYPE html>
 <html lang="ko">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>진짜 물감 색깔 놀이</title>
-    <style>
-        @import url('https://fonts.googleapis.com/css2?family=Jua&display=swap');
-        body { margin: 0; overflow: hidden; background: #87CEEB; font-family: 'Jua', cursive; touch-action: none; user-select: none; }
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+  <title>하윤의 물감 마법 연구소 PLUS</title>
+  <style>
+    :root {
+      --cream: #fff7df;
+      --ink: #263238;
+      --orange: #ff9f1c;
+      --pink: #ff5d8f;
+      --mint: #7bdff2;
+      --green: #b2f7b2;
+      --blue: #5cc7ff;
+      --panel: rgba(255, 255, 255, 0.94);
+      --shadow: 0 14px 36px rgba(23, 39, 60, 0.18);
+    }
 
-        /* UI 컨테이너 */
-        #ui-container { 
-            position: absolute; bottom: 0; left: 0; width: 100%;
-            background: rgba(255, 255, 255, 0.95); 
-            padding: 15px 0 35px 0; 
-            border-top-left-radius: 25px; border-top-right-radius: 25px;
-            box-shadow: 0 -10px 30px rgba(0,0,0,0.15);
-            display: flex; flex-direction: column; align-items: center; z-index: 100;
-            border-top: 6px solid #FFD700;
-        }
+    * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+    html, body { width: 100%; height: 100%; }
+    body {
+      margin: 0;
+      overflow: hidden;
+      background: linear-gradient(#8ed8ff 0%, #dff8ff 54%, #a5df8a 55%, #70b96d 100%);
+      font-family: "Trebuchet MS", "Apple SD Gothic Neo", "Malgun Gothic", system-ui, sans-serif;
+      color: var(--ink);
+      touch-action: none;
+      user-select: none;
+    }
 
-        .info { font-size: 1.2rem; color: #333; margin-bottom: 12px; text-align: center; }
-        .highlight { color: #FF4500; font-weight: bold; }
+    canvas { display: block; }
 
-        /* 팔레트 */
-        .palette { 
-            display: grid; 
-            grid-template-columns: repeat(8, 1fr); 
-            gap: 8px; 
-            width: 94%; max-width: 480px; 
-            justify-items: center;
-            margin-bottom: 10px;
-        }
-        
-        /* 물감 버튼 */
-        .color-drop { 
-            width: 100%; aspect-ratio: 1; 
-            max-width: 45px; 
-            border-radius: 50%; 
-            border: 2px solid #fff; 
-            cursor: pointer; box-shadow: 0 4px 6px rgba(0,0,0,0.25); 
-            box-sizing: border-box;
-            transition: transform 0.1s;
-        }
-        .color-drop:active { transform: scale(0.8); }
-        .color-drop.active { border: 3px solid #FFD700; transform: scale(1.15); box-shadow: 0 0 12px #FFD700; z-index: 10; }
-        .color-drop.water { background: radial-gradient(circle at 30% 30%, #ffffff, #87CEFA); border: 2px solid #B0E0E6; }
+    #hud {
+      position: absolute;
+      left: 14px;
+      top: 12px;
+      z-index: 50;
+      width: min(420px, calc(100vw - 28px));
+      pointer-events: none;
+    }
 
-        .reset-all-btn { 
-            background-color: #FF6347; color: white; border: none; 
-            padding: 10px 25px; border-radius: 25px; font-size: 1.1rem;
-            cursor: pointer; font-family: 'Jua', cursive;
-            box-shadow: 0 4px #c0392b; margin-top: 5px;
-        }
-        .reset-all-btn:active { transform: translateY(3px); box-shadow: 0 1px #c0392b; }
+    .title-card {
+      background: rgba(255, 255, 255, 0.84);
+      backdrop-filter: blur(12px);
+      border: 3px solid rgba(255, 255, 255, 0.95);
+      border-radius: 24px;
+      padding: 12px 14px;
+      box-shadow: var(--shadow);
+    }
 
-        /* 비커 UI */
-        .beaker-ui-group {
-            position: absolute; display: flex; flex-direction: row; 
-            align-items: center; justify-content: center; gap: 4px;
-            pointer-events: none; 
-            transform: translate(-50%, -50%);
-            width: 120px;
-        }
+    .title-card h1 {
+      margin: 0;
+      font-size: clamp(1.08rem, 4.2vw, 1.75rem);
+      line-height: 1.05;
+      letter-spacing: -0.03em;
+    }
 
-        .beaker-label { 
-            font-size: 13px; color: #333; font-weight: bold; 
-            background: rgba(255,255,255,0.9); padding: 4px 8px; border-radius: 8px;
-            white-space: nowrap; box-shadow: 0 2px 4px rgba(0,0,0,0.1);
-        }
+    .subtitle {
+      margin-top: 6px;
+      font-size: clamp(0.74rem, 2.5vw, 0.95rem);
+      opacity: 0.84;
+    }
 
-        .beaker-reset-btn {
-            pointer-events: auto; 
-            width: 26px; height: 26px;
-            background-color: #fff; color: #333; border: 2px solid #FF6347; border-radius: 50%;
-            cursor: pointer; font-size: 14px; display: flex; justify-content: center; align-items: center;
-            box-shadow: 0 2px 5px rgba(0,0,0,0.2);
-        }
-        .beaker-reset-btn:active { transform: scale(0.9); background-color: #FF6347; color: white; }
-    </style>
+    .stats-row {
+      display: flex;
+      gap: 8px;
+      margin-top: 9px;
+      flex-wrap: wrap;
+    }
+
+    .pill {
+      border-radius: 999px;
+      background: #fff4be;
+      padding: 5px 9px;
+      font-weight: 800;
+      font-size: 0.84rem;
+      box-shadow: inset 0 -2px rgba(0, 0, 0, 0.06);
+    }
+
+    #mission-card {
+      position: absolute;
+      right: 14px;
+      top: 12px;
+      z-index: 55;
+      width: min(330px, calc(100vw - 28px));
+      background: var(--panel);
+      backdrop-filter: blur(12px);
+      border-radius: 26px;
+      padding: 12px;
+      box-shadow: var(--shadow);
+      border: 3px solid rgba(255, 255, 255, 0.95);
+    }
+
+    .mission-top {
+      display: grid;
+      grid-template-columns: 58px 1fr;
+      gap: 10px;
+      align-items: center;
+    }
+
+    #target-swatch {
+      width: 58px;
+      height: 58px;
+      border-radius: 50% 47% 55% 45%;
+      border: 4px solid white;
+      box-shadow: inset -8px -9px rgba(0, 0, 0, 0.08), 0 5px 10px rgba(0, 0, 0, 0.18);
+      position: relative;
+    }
+
+    #target-swatch::after {
+      content: "";
+      position: absolute;
+      width: 18px;
+      height: 12px;
+      border-radius: 999px;
+      left: 11px;
+      top: 9px;
+      background: rgba(255, 255, 255, 0.58);
+      transform: rotate(-24deg);
+    }
+
+    .mission-label {
+      font-size: 0.76rem;
+      font-weight: 900;
+      opacity: 0.67;
+    }
+
+    #mission-name {
+      margin-top: 2px;
+      font-size: 1.05rem;
+      line-height: 1.16;
+      font-weight: 900;
+      letter-spacing: -0.02em;
+    }
+
+    .meter-wrap {
+      margin-top: 10px;
+      height: 14px;
+      background: #edf1f3;
+      border-radius: 999px;
+      overflow: hidden;
+      border: 2px solid rgba(0,0,0,0.05);
+    }
+
+    #score-meter {
+      height: 100%;
+      width: 0%;
+      border-radius: 999px;
+      background: linear-gradient(90deg, #a0e7e5, #b4f8c8, #fbe7c6, #ffaeae);
+      transition: width 0.25s ease;
+    }
+
+    #score-text {
+      margin-top: 6px;
+      font-weight: 900;
+      font-size: 0.88rem;
+      min-height: 1.2em;
+    }
+
+    .mission-buttons {
+      display: flex;
+      gap: 8px;
+      margin-top: 10px;
+    }
+
+    .tiny-btn, .main-btn {
+      border: none;
+      border-radius: 999px;
+      padding: 9px 12px;
+      font-family: inherit;
+      font-weight: 900;
+      color: #253238;
+      background: #fff2a6;
+      box-shadow: 0 4px 0 #e4be51, 0 7px 12px rgba(0,0,0,0.12);
+      cursor: pointer;
+      touch-action: manipulation;
+    }
+
+    .tiny-btn:active, .main-btn:active { transform: translateY(3px); box-shadow: 0 1px 0 #e4be51; }
+    .tiny-btn.secondary { background: #dcf4ff; box-shadow: 0 4px 0 #8bc8de, 0 7px 12px rgba(0,0,0,0.10); }
+    .tiny-btn.pink { background: #ffd5e7; box-shadow: 0 4px 0 #e596b5, 0 7px 12px rgba(0,0,0,0.10); }
+    .tiny-btn.good { background: #c9f7cc; box-shadow: 0 4px 0 #83c987, 0 7px 12px rgba(0,0,0,0.10); }
+
+    #album-panel {
+      position: absolute;
+      left: 14px;
+      top: 146px;
+      z-index: 52;
+      max-width: min(420px, calc(100vw - 28px));
+      background: rgba(255, 255, 255, 0.76);
+      border: 2px solid rgba(255,255,255,0.9);
+      border-radius: 20px;
+      padding: 9px;
+      box-shadow: 0 10px 24px rgba(0,0,0,0.12);
+      backdrop-filter: blur(10px);
+      pointer-events: auto;
+    }
+
+    .album-title {
+      font-size: 0.78rem;
+      font-weight: 900;
+      opacity: 0.74;
+      margin-bottom: 6px;
+    }
+
+    #sticker-book, #swatch-book {
+      display: flex;
+      gap: 6px;
+      align-items: center;
+      flex-wrap: wrap;
+      min-height: 28px;
+    }
+
+    .sticker {
+      width: 30px;
+      height: 30px;
+      display: grid;
+      place-items: center;
+      border-radius: 11px;
+      background: #fff3b0;
+      border: 2px solid white;
+      box-shadow: 0 3px 7px rgba(0,0,0,0.12);
+      font-size: 1.05rem;
+    }
+
+    .saved-swatch {
+      width: 30px;
+      height: 30px;
+      border-radius: 50% 45% 54% 48%;
+      border: 3px solid white;
+      box-shadow: inset -6px -6px rgba(0, 0, 0, 0.08), 0 3px 7px rgba(0,0,0,0.14);
+    }
+
+    #ui-container {
+      position: absolute;
+      left: 0;
+      bottom: 0;
+      z-index: 80;
+      width: 100%;
+      background: rgba(255, 255, 255, 0.94);
+      border-top-left-radius: 28px;
+      border-top-right-radius: 28px;
+      border-top: 6px solid #ffd166;
+      box-shadow: 0 -13px 35px rgba(0,0,0,0.16);
+      padding: 13px max(12px, env(safe-area-inset-left)) calc(13px + env(safe-area-inset-bottom)) max(12px, env(safe-area-inset-right));
+    }
+
+    #status {
+      text-align: center;
+      font-size: clamp(0.95rem, 3.3vw, 1.24rem);
+      font-weight: 900;
+      letter-spacing: -0.02em;
+      min-height: 1.5em;
+      margin-bottom: 9px;
+    }
+
+    .highlight { color: #e63946; }
+    .soft { color: #607d8b; }
+
+    .selected-row {
+      display: flex;
+      justify-content: center;
+      gap: 8px;
+      align-items: center;
+      margin-bottom: 9px;
+      font-weight: 900;
+      color: #455a64;
+      font-size: 0.88rem;
+    }
+
+    #selected-chip {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      padding: 6px 10px;
+      border-radius: 999px;
+      background: #eef8ff;
+      box-shadow: inset 0 -2px rgba(0,0,0,0.05);
+    }
+
+    .chip-dot {
+      width: 18px;
+      height: 18px;
+      border-radius: 50%;
+      border: 2px solid white;
+      box-shadow: inset -3px -3px rgba(0,0,0,0.10), 0 2px 5px rgba(0,0,0,0.15);
+    }
+
+    #palette {
+      display: grid;
+      grid-template-columns: repeat(8, minmax(40px, 1fr));
+      gap: 8px;
+      width: min(680px, 100%);
+      margin: 0 auto 10px auto;
+    }
+
+    .paint-btn {
+      min-height: 46px;
+      border: 0;
+      border-radius: 18px;
+      background: #f7fbff;
+      box-shadow: 0 4px 0 #d4dfe5, 0 7px 13px rgba(0,0,0,0.10);
+      cursor: pointer;
+      display: grid;
+      place-items: center;
+      padding: 5px 4px 4px;
+      font-family: inherit;
+      position: relative;
+      overflow: hidden;
+      touch-action: manipulation;
+    }
+
+    .paint-btn:active { transform: translateY(3px) scale(0.98); box-shadow: 0 1px 0 #d4dfe5; }
+    .paint-btn.active { outline: 4px solid #ffd166; transform: scale(1.06); z-index: 2; }
+
+    .paint-blob {
+      width: 31px;
+      height: 31px;
+      border-radius: 46% 54% 59% 41% / 51% 48% 52% 49%;
+      border: 3px solid rgba(255,255,255,0.95);
+      box-shadow: inset -7px -8px rgba(0,0,0,0.12), 0 4px 9px rgba(0,0,0,0.18);
+      position: relative;
+    }
+
+    .paint-blob::after {
+      content: "";
+      position: absolute;
+      left: 7px;
+      top: 5px;
+      width: 11px;
+      height: 7px;
+      border-radius: 999px;
+      background: rgba(255,255,255,0.50);
+      transform: rotate(-25deg);
+    }
+
+    .paint-name {
+      margin-top: 2px;
+      font-size: 0.68rem;
+      font-weight: 900;
+      line-height: 1;
+      color: #455a64;
+    }
+
+    .water-blob {
+      background: radial-gradient(circle at 30% 25%, #ffffff, #9be8ff 45%, #5ec8f7);
+      animation: waterPulse 2.2s ease-in-out infinite;
+    }
+
+    @keyframes waterPulse {
+      0%, 100% { transform: scale(1) rotate(-4deg); }
+      50% { transform: scale(1.08) rotate(8deg); }
+    }
+
+    .actions {
+      display: flex;
+      justify-content: center;
+      gap: 8px;
+      flex-wrap: wrap;
+    }
+
+    .main-btn {
+      font-size: 0.92rem;
+      padding: 10px 14px;
+      background: #ffd166;
+      box-shadow: 0 4px 0 #e2a63c, 0 7px 13px rgba(0,0,0,0.12);
+    }
+
+    .main-btn.red { background: #ff9b9b; box-shadow: 0 4px 0 #d65d5d, 0 7px 13px rgba(0,0,0,0.12); }
+    .main-btn.blue { background: #bde9ff; box-shadow: 0 4px 0 #7bc2df, 0 7px 13px rgba(0,0,0,0.12); }
+    .main-btn.green { background: #c5f6c8; box-shadow: 0 4px 0 #7fcf86, 0 7px 13px rgba(0,0,0,0.12); }
+
+    .beaker-ui-group {
+      position: absolute;
+      z-index: 70;
+      transform: translate(-50%, -50%);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 5px;
+      pointer-events: none;
+      width: 140px;
+    }
+
+    .beaker-label {
+      pointer-events: none;
+      max-width: 96px;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+      font-size: 0.78rem;
+      font-weight: 900;
+      color: #27343b;
+      background: rgba(255, 255, 255, 0.92);
+      border: 2px solid rgba(255,255,255,0.96);
+      padding: 4px 7px;
+      border-radius: 10px;
+      box-shadow: 0 3px 8px rgba(0,0,0,0.14);
+    }
+
+    .beaker-reset-btn {
+      pointer-events: auto;
+      width: 28px;
+      height: 28px;
+      display: grid;
+      place-items: center;
+      background: #ffffff;
+      border: 2px solid #ff7f7f;
+      border-radius: 50%;
+      cursor: pointer;
+      font-size: 14px;
+      box-shadow: 0 3px 8px rgba(0,0,0,0.18);
+    }
+
+    .beaker-reset-btn:active { transform: scale(0.9); background: #ff7f7f; }
+
+    #toast {
+      position: absolute;
+      left: 50%;
+      top: 43%;
+      transform: translate(-50%, -50%) scale(0.96);
+      z-index: 150;
+      pointer-events: none;
+      background: rgba(255,255,255,0.95);
+      border: 4px solid #ffd166;
+      box-shadow: 0 20px 60px rgba(0,0,0,0.22);
+      border-radius: 28px;
+      padding: 14px 18px;
+      font-size: clamp(1.05rem, 4.4vw, 1.85rem);
+      font-weight: 1000;
+      opacity: 0;
+      transition: opacity 0.22s ease, transform 0.22s ease;
+      text-align: center;
+      max-width: min(560px, calc(100vw - 30px));
+    }
+
+    #toast.show { opacity: 1; transform: translate(-50%, -50%) scale(1); }
+
+    .hidden { display: none !important; }
+
+    @media (max-width: 780px) {
+      #hud { top: 8px; left: 8px; width: calc(100vw - 16px); }
+      #mission-card {
+        top: 96px;
+        right: 8px;
+        width: min(300px, calc(100vw - 16px));
+        padding: 10px;
+      }
+      #album-panel {
+        display: block;
+        left: 8px;
+        top: 230px;
+        max-width: calc(100vw - 16px);
+        transform: scale(0.92);
+        transform-origin: top left;
+      }
+      #album-panel.hidden { display: none !important; }
+      .mission-top { grid-template-columns: 48px 1fr; gap: 8px; }
+      #target-swatch { width: 48px; height: 48px; }
+      #mission-name { font-size: 0.95rem; }
+      #score-text { font-size: 0.78rem; }
+      .mission-buttons { gap: 6px; }
+      .tiny-btn { padding: 7px 9px; font-size: 0.76rem; }
+      #palette { grid-template-columns: repeat(8, minmax(34px, 1fr)); gap: 6px; }
+      .paint-btn { border-radius: 15px; min-height: 42px; padding: 4px 2px; }
+      .paint-blob { width: 27px; height: 27px; }
+      .paint-name { font-size: 0.57rem; }
+      .main-btn { padding: 8px 10px; font-size: 0.76rem; }
+      #ui-container { padding-top: 10px; border-top-left-radius: 22px; border-top-right-radius: 22px; }
+      #status { margin-bottom: 6px; }
+      .selected-row { margin-bottom: 7px; font-size: 0.78rem; }
+    }
+
+    @media (max-height: 720px) {
+      #mission-card { transform: scale(0.92); transform-origin: top right; }
+      .title-card { padding: 9px 11px; }
+      .subtitle, .stats-row { display: none; }
+      #ui-container { padding-top: 8px; }
+      .selected-row { display: none; }
+    }
+  </style>
 </head>
 <body>
+  <div id="hud">
+    <div class="title-card">
+      <h1>🎨 하윤의 물감 마법 연구소 PLUS</h1>
+      <div class="subtitle">진짜 물감처럼 탁해지고, 물을 넣으면 연해지고, 흰색을 넣으면 부드러워져요.</div>
+      <div class="stats-row">
+        <div class="pill" id="drop-stat">방울 0개</div>
+        <div class="pill" id="sticker-stat">스티커 0개</div>
+        <div class="pill" id="swatch-stat">도감 0개</div>
+      </div>
+    </div>
+  </div>
 
-<audio id="sfx-pop" src="https://assets.mixkit.co/active_storage/sfx/2578/2578-preview.m4a"></audio>
-<audio id="sfx-splash" src="https://assets.mixkit.co/active_storage/sfx/112/112-preview.m4a"></audio>
-<audio id="sfx-whoosh" src="https://assets.mixkit.co/active_storage/sfx/1472/1472-preview.m4a"></audio>
+  <section id="mission-card" aria-label="색깔 미션 카드">
+    <div class="mission-top">
+      <div id="target-swatch" title="목표 색깔"></div>
+      <div>
+        <div class="mission-label">오늘의 색깔 미션</div>
+        <div id="mission-name">불러오는 중...</div>
+      </div>
+    </div>
+    <div class="meter-wrap"><div id="score-meter"></div></div>
+    <div id="score-text">비커에 색을 섞으면 점수가 나와요.</div>
+    <div class="mission-buttons">
+      <button class="tiny-btn good" id="newMissionBtn">🎲 새 미션</button>
+      <button class="tiny-btn secondary" id="hintBtn">💡 힌트</button>
+      <button class="tiny-btn pink" id="toggleAlbumBtn">⭐ 도감</button>
+    </div>
+  </section>
 
-<div id="ui-container">
-    <div class="info" id="status">진한 색깔을 골라봐! 하윤!</div>
-    <div class="palette" id="palette"></div>
-    <button class="reset-all-btn" id="resetAllBtn">✨ 모두 비우기</button>
-</div>
+  <section id="album-panel" aria-label="스티커와 색 도감">
+    <div class="album-title">획득한 미션 스티커</div>
+    <div id="sticker-book"></div>
+    <div class="album-title" style="margin-top:8px;">저장한 나만의 색</div>
+    <div id="swatch-book"></div>
+  </section>
 
-<script type="importmap">
-    { "imports": { 
+  <div id="toast"></div>
+
+  <main id="ui-container">
+    <div id="status">먼저 물감을 골라봐, 하윤! 🌈</div>
+    <div class="selected-row">
+      선택한 물감
+      <span id="selected-chip"><span class="chip-dot" id="selected-dot"></span><span id="selected-name">아직 없음</span></span>
+    </div>
+    <div id="palette" aria-label="물감 팔레트"></div>
+    <div class="actions">
+      <button class="main-btn green" id="stirBtn">🥄 선택 비커 휘젓기</button>
+      <button class="main-btn blue" id="saveColorBtn">📒 색 도감에 저장</button>
+      <button class="main-btn" id="surpriseBtn">✨ 반짝이 한 스푼</button>
+      <button class="main-btn red" id="resetAllBtn">🧽 모두 비우기</button>
+    </div>
+  </main>
+
+  <script type="importmap">
+    {
+      "imports": {
         "three": "https://unpkg.com/three@0.160.0/build/three.module.js",
         "three/addons/": "https://unpkg.com/three@0.160.0/examples/jsm/"
-    } }
-</script>
+      }
+    }
+  </script>
 
-<script type="module">
+  <script type="module">
     import * as THREE from 'three';
     import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
 
-    const sfxPop = document.getElementById('sfx-pop');
-    const sfxSplash = document.getElementById('sfx-splash');
-    const sfxWhoosh = document.getElementById('sfx-whoosh');
-    sfxSplash.volume = 0.6;
-    function playSound(sound) { sound.currentTime = 0; sound.play().catch(() => {}); }
+    const CHILD_NAME = '하윤';
+    const STORAGE_KEY = 'hayoon-paint-magic-lab-plus-v1';
+    const MAX_DROPS = 64;
+    const BAND_COUNT = 12;
 
-    // --- 씬 설정 ---
-    const scene = new THREE.Scene();
-    scene.background = new THREE.Color(0x87CEEB); 
-    scene.fog = new THREE.FogExp2(0x87CEEB, 0.02);
+    const clamp = (v, min = 0, max = 1) => Math.max(min, Math.min(max, v));
+    const lerp = (a, b, t) => a + (b - a) * t;
+    const easeOutBack = (t) => {
+      const c1 = 1.70158;
+      const c3 = c1 + 1;
+      return 1 + c3 * Math.pow(t - 1, 3) + c1 * Math.pow(t - 1, 2);
+    };
 
-    const camera = new THREE.PerspectiveCamera(50, window.innerWidth / window.innerHeight, 0.1, 1000);
-    
-    // [반응형 카메라 위치 설정 함수]
-    // 화면 비율에 따라 카메라 거리를 조절하여 항상 모든 비커가 보이게 함
-    function fitCamera() {
-        const aspect = window.innerWidth / window.innerHeight;
-        // 세로가 긴 화면(모바일)일수록 더 멀리(Z값을 크게) 잡음
-        // 기본 23에서 비율에 따라 더 멀어지게 계산
-        const distance = aspect < 1 ? 26 / aspect : 22; 
-        
-        camera.position.set(0, 8, distance);
-        camera.updateProjectionMatrix();
+    const rgbWeights = {
+      r: [0, 0, 0, 0.02, 0.06, 0.13, 0.25, 0.50, 0.78, 1.00, 0.85, 0.45],
+      g: [0, 0.02, 0.10, 0.38, 0.72, 1.00, 0.90, 0.62, 0.28, 0.07, 0.02, 0],
+      b: [0.80, 1.00, 0.95, 0.72, 0.40, 0.16, 0.05, 0.01, 0, 0, 0, 0.04]
+    };
+    Object.keys(rgbWeights).forEach((key) => {
+      const sum = rgbWeights[key].reduce((a, b) => a + b, 0);
+      rgbWeights[key] = rgbWeights[key].map(v => v / sum);
+    });
+
+    const PIGMENTS = {
+      red:     { name: '빨강', emoji: '🍓', ui: '#d82525', strength: 1.05, spectrum: [.10,.07,.045,.035,.04,.06,.12,.30,.68,.92,.88,.72] },
+      scarlet: { name: '다홍', emoji: '🌺', ui: '#ff4939', strength: 1.0, spectrum: [.08,.05,.04,.035,.05,.09,.18,.48,.88,.95,.80,.50] },
+      orange:  { name: '주황', emoji: '🍊', ui: '#ff8c22', strength: .95, spectrum: [.05,.045,.04,.05,.10,.20,.45,.85,.98,.82,.45,.22] },
+      yellow:  { name: '노랑', emoji: '☀️', ui: '#ffd331', strength: .92, spectrum: [.045,.05,.06,.10,.22,.62,.90,.98,.93,.55,.18,.08] },
+      lime:    { name: '연두', emoji: '🌱', ui: '#9bed48', strength: .92, spectrum: [.05,.09,.12,.28,.60,.92,.95,.75,.28,.08,.04,.04] },
+      green:   { name: '초록', emoji: '🌿', ui: '#139b43', strength: 1.02, spectrum: [.04,.055,.08,.22,.58,.86,.68,.25,.08,.035,.03,.035] },
+      mint:    { name: '민트', emoji: '🧊', ui: '#5ee6c6', strength: .75, spectrum: [.28,.46,.64,.82,.86,.80,.58,.25,.10,.05,.04,.05] },
+      sky:     { name: '하늘', emoji: '☁️', ui: '#5ecbff', strength: .76, spectrum: [.62,.82,.94,.98,.92,.72,.36,.12,.06,.04,.04,.05] },
+      blue:    { name: '파랑', emoji: '🌊', ui: '#1d61d6', strength: 1.05, spectrum: [.50,.88,.98,.95,.75,.50,.15,.03,.02,.02,.03,.05] },
+      navy:    { name: '남색', emoji: '🌌', ui: '#20206f', strength: 1.15, spectrum: [.35,.55,.72,.40,.12,.05,.025,.018,.015,.015,.015,.02] },
+      purple:  { name: '보라', emoji: '🍇', ui: '#8e35bf', strength: 1.0, spectrum: [.58,.60,.72,.36,.12,.05,.04,.06,.16,.52,.80,.70] },
+      pink:    { name: '분홍', emoji: '🌸', ui: '#ff66b3', strength: .78, spectrum: [.80,.72,.58,.30,.14,.08,.08,.16,.45,.85,.96,.88] },
+      brown:   { name: '갈색', emoji: '🍫', ui: '#9b5a2e', strength: 1.1, spectrum: [.08,.06,.045,.04,.05,.08,.16,.32,.48,.42,.26,.12] },
+      white:   { name: '흰색', emoji: '🥛', ui: '#ffffff', strength: .52, spectrum: Array(BAND_COUNT).fill(.965), isWhite: true },
+      black:   { name: '검정', emoji: '🖤', ui: '#191919', strength: 1.65, spectrum: Array(BAND_COUNT).fill(.018), isBlack: true },
+      water:   { name: '물', emoji: '💧', ui: '#bff3ff', isWater: true }
+    };
+
+    const paletteOrder = ['red','scarlet','orange','yellow','lime','green','mint','sky','blue','navy','purple','pink','brown','white','black','water'];
+
+    const COLOR_NOUNS = {
+      red: ['딸기', '장미', '사과'],
+      orange: ['귤', '노을', '당근'],
+      yellow: ['햇살', '레몬', '병아리'],
+      green: ['숲속', '새싹', '말차'],
+      cyan: ['민트', '바다', '얼음'],
+      blue: ['하늘', '파도', '별밤'],
+      purple: ['라벤더', '포도', '마법'],
+      pink: ['복숭아', '벚꽃', '솜사탕'],
+      brown: ['초코', '쿠키', '도토리'],
+      gray: ['비구름', '돌멩이', '달그림자']
+    };
+    const COLOR_ADJ = ['보송보송한', '반짝이는', '몽글몽글', '살짝 비밀스러운', '폭신한', '마법 같은', '달콤한'];
+
+    function spectrumToRgb(spectrum) {
+      const linear = ['r','g','b'].map(ch => {
+        const v = spectrum.reduce((acc, band, i) => acc + band * rgbWeights[ch][i], 0);
+        return clamp(v);
+      });
+      const srgb = linear.map(v => Math.pow(v, 1 / 2.18));
+      return { r: srgb[0], g: srgb[1], b: srgb[2] };
     }
 
-    const renderer = new THREE.WebGLRenderer({ antialias: true });
+    function rgbToCss(rgb) {
+      return `rgb(${Math.round(clamp(rgb.r) * 255)}, ${Math.round(clamp(rgb.g) * 255)}, ${Math.round(clamp(rgb.b) * 255)})`;
+    }
+
+    function hexToRgbFloat(hex) {
+      const h = hex.replace('#', '');
+      return {
+        r: parseInt(h.slice(0, 2), 16) / 255,
+        g: parseInt(h.slice(2, 4), 16) / 255,
+        b: parseInt(h.slice(4, 6), 16) / 255
+      };
+    }
+
+    function rgbToHex(rgb) {
+      const toHex = (v) => Math.round(clamp(v) * 255).toString(16).padStart(2, '0');
+      return `#${toHex(rgb.r)}${toHex(rgb.g)}${toHex(rgb.b)}`;
+    }
+
+    function rgbDistance(a, b) {
+      const dr = a.r - b.r, dg = a.g - b.g, db = a.b - b.b;
+      return Math.sqrt(dr * dr + dg * dg + db * db);
+    }
+
+    function rgbToHsl(rgb) {
+      const r = rgb.r, g = rgb.g, b = rgb.b;
+      const max = Math.max(r, g, b), min = Math.min(r, g, b);
+      let h = 0, s = 0;
+      const l = (max + min) / 2;
+      if (max !== min) {
+        const d = max - min;
+        s = l > 0.5 ? d / (2 - max - min) : d / (max + min);
+        switch (max) {
+          case r: h = (g - b) / d + (g < b ? 6 : 0); break;
+          case g: h = (b - r) / d + 2; break;
+          default: h = (r - g) / d + 4; break;
+        }
+        h /= 6;
+      }
+      return { h, s, l };
+    }
+
+    function randomItem(arr) { return arr[Math.floor(Math.random() * arr.length)]; }
+
+    function colorFamily(rgb) {
+      const { h, s, l } = rgbToHsl(rgb);
+      const deg = h * 360;
+      if (l < 0.22 || s < 0.12) return l < 0.33 ? 'gray' : 'gray';
+      if (deg < 18 || deg >= 345) return 'red';
+      if (deg < 48) return 'orange';
+      if (deg < 78) return 'yellow';
+      if (deg < 150) return 'green';
+      if (deg < 195) return 'cyan';
+      if (deg < 245) return 'blue';
+      if (deg < 290) return 'purple';
+      if (deg < 345) return 'pink';
+      return 'gray';
+    }
+
+    function makeColorName(rgb, dropCount = 0) {
+      const hsl = rgbToHsl(rgb);
+      let family = colorFamily(rgb);
+      if (hsl.l < 0.24 && hsl.s > 0.18) family = 'brown';
+      const noun = randomItem(COLOR_NOUNS[family] || COLOR_NOUNS.gray);
+      const adj = randomItem(COLOR_ADJ);
+      const tiny = dropCount < 4 ? '아기 ' : '';
+      return `${tiny}${adj} ${noun}색`;
+    }
+
+    function mixDrops(drops) {
+      if (!drops.length) {
+        return {
+          rgb: { r: 1, g: 1, b: 1 },
+          opacity: 0,
+          fill: 0.001,
+          name: '빈 비커',
+          spectrum: Array(BAND_COUNT).fill(1)
+        };
+      }
+
+      let water = 0;
+      let pigmentWeight = 0;
+      const counts = {};
+      const weightedLogs = Array(BAND_COUNT).fill(0);
+
+      drops.forEach(id => {
+        counts[id] = (counts[id] || 0) + 1;
+        const pigment = PIGMENTS[id];
+        if (!pigment || pigment.isWater) { water += 1; return; }
+        const w = pigment.strength || 1;
+        pigmentWeight += w;
+        pigment.spectrum.forEach((band, i) => {
+          weightedLogs[i] += w * Math.log(Math.max(0.012, band));
+        });
+      });
+
+      if (pigmentWeight <= 0) {
+        const opacity = clamp(0.18 + water * 0.02, 0.18, 0.32);
+        return {
+          rgb: { r: 0.86, g: 0.97, b: 1.0 },
+          opacity,
+          fill: clamp(drops.length / MAX_DROPS, 0.08, 1),
+          name: '맑은 물빛',
+          spectrum: Array(BAND_COUNT).fill(0.93)
+        };
+      }
+
+      let spectrum = weightedLogs.map(v => Math.exp(v / pigmentWeight));
+
+      // 어린이의 직관과 실제 물감의 탁해짐을 같이 살리기 위한 작은 보정.
+      // 기본은 흡수율 기반 혼합이고, 특정 조합은 작가 팔레트처럼 살짝 방향을 잡아준다.
+      const has = (id) => (counts[id] || 0) > 0;
+      const warm = (counts.red || 0) + (counts.scarlet || 0) + (counts.orange || 0);
+      const yellows = (counts.yellow || 0) + (counts.lime || 0);
+      const blues = (counts.blue || 0) + (counts.sky || 0) + (counts.navy || 0);
+      const greens = (counts.green || 0) + (counts.mint || 0);
+      const purples = (counts.purple || 0) + (counts.pink || 0);
+      const totalPigmentDrops = drops.length - water;
+
+      function blendToward(targetSpectrum, amount) {
+        spectrum = spectrum.map((v, i) => lerp(v, targetSpectrum[i], amount));
+      }
+
+      if (yellows && blues && warm === 0 && purples === 0) {
+        blendToward(PIGMENTS.green.spectrum, 0.22);
+      }
+      if (warm && yellows && blues === 0 && greens === 0 && purples === 0) {
+        blendToward(PIGMENTS.orange.spectrum, 0.18);
+      }
+      if ((has('red') || has('scarlet') || has('pink')) && blues && yellows === 0 && greens === 0) {
+        blendToward(PIGMENTS.purple.spectrum, 0.18);
+      }
+      if ((warm && greens) || (warm && blues && yellows) || (totalPigmentDrops >= 5 && Object.keys(counts).filter(id => !PIGMENTS[id].isWater && counts[id]).length >= 4)) {
+        blendToward(PIGMENTS.brown.spectrum, 0.24);
+      }
+
+      const whiteDrops = counts.white || 0;
+      const blackDrops = counts.black || 0;
+      const dilution = water * 2.25 + whiteDrops * 0.28;
+      const pigmentConcentration = pigmentWeight / (pigmentWeight + dilution);
+      const waterLift = water > 0 ? clamp(1 - pigmentConcentration, 0, 0.86) : 0;
+
+      spectrum = spectrum.map((band, i) => {
+        const paperWhite = 0.97;
+        const lifted = paperWhite - pigmentConcentration * (paperWhite - band);
+        const waterySparkle = water > 0 ? 0.015 * Math.sin(i * 1.7 + drops.length) : 0;
+        return clamp(lerp(band, lifted, waterLift) + waterySparkle);
+      });
+
+      let rgb = spectrumToRgb(spectrum);
+
+      // 흰색은 파스텔화, 검정은 명도와 채도를 낮춰준다.
+      if (whiteDrops > 0) {
+        const t = clamp(whiteDrops / (totalPigmentDrops + whiteDrops + 1), 0, 0.48);
+        rgb = { r: lerp(rgb.r, 1, t), g: lerp(rgb.g, 1, t), b: lerp(rgb.b, 1, t) };
+      }
+      if (blackDrops > 0) {
+        const t = clamp(blackDrops / (totalPigmentDrops + 1) * 0.52, 0, 0.65);
+        rgb = { r: rgb.r * (1 - t), g: rgb.g * (1 - t), b: rgb.b * (1 - t) };
+      }
+
+      const opacity = clamp(0.36 + pigmentConcentration * 0.63 + whiteDrops * 0.035, 0.26, 0.98);
+      const fill = clamp(drops.length / MAX_DROPS, 0.09, 1);
+      const name = makeColorName(rgb, drops.length);
+      return { rgb, opacity, fill, name, spectrum };
+    }
+
+    function recipeColor(recipe) {
+      return mixDrops(recipe).rgb;
+    }
+
+    const MISSIONS = [
+      { emoji: '🌸', name: '벚꽃 솜사탕 만들기', recipe: ['pink','white','water','white'], hint: '분홍에 흰색을 많이 넣고, 물 한 방울로 부드럽게!' },
+      { emoji: '🌲', name: '숲속 요정 초록 만들기', recipe: ['yellow','blue','green','water'], hint: '노랑과 파랑을 먼저 만나게 하고, 초록으로 살짝 진하게!' },
+      { emoji: '🍑', name: '복숭아 크림 만들기', recipe: ['scarlet','yellow','white','white','water'], hint: '다홍 조금, 노랑 조금, 흰색 듬뿍!' },
+      { emoji: '🌅', name: '노을 오렌지 만들기', recipe: ['red','yellow','yellow','white'], hint: '빨강보다 노랑을 더 많이 넣어봐.' },
+      { emoji: '🧜', name: '인어공주 민트 바다 만들기', recipe: ['sky','yellow','mint','white','water'], hint: '하늘색에 노랑을 살짝, 민트와 흰색으로 반짝!' },
+      { emoji: '🍫', name: '초콜릿 우유 만들기', recipe: ['brown','white','white','water'], hint: '갈색을 흰색과 물로 연하게 만들면 돼.' },
+      { emoji: '🌌', name: '밤하늘 남색 만들기', recipe: ['blue','purple','navy','black','water'], hint: '파랑과 보라를 섞은 뒤 검정은 아주 조금만!' },
+      { emoji: '🍇', name: '포도 젤리 보라 만들기', recipe: ['pink','blue','purple','white'], hint: '분홍과 파랑을 섞고 보라로 방향을 잡아줘.' },
+      { emoji: '🍵', name: '말차 라떼 만들기', recipe: ['green','yellow','white','white'], hint: '초록에 노랑을 조금, 흰색을 넣으면 말차 라떼!' },
+      { emoji: '☁️', name: '비 오는 구름 회색 만들기', recipe: ['black','white','white','sky','water'], hint: '흰색에 검정은 아주 조금, 하늘색과 물로 촉촉하게.' },
+      { emoji: '🦋', name: '나비 날개 하늘색 만들기', recipe: ['sky','white','water','blue'], hint: '하늘색에 흰색, 물, 파랑 아주 조금!' },
+      { emoji: '🧡', name: '살구 젤리색 만들기', recipe: ['orange','yellow','white','water'], hint: '주황과 노랑을 흰색으로 말랑하게!' }
+    ].map((mission) => ({ ...mission, target: recipeColor(mission.recipe) }));
+
+    const state = {
+      selectedId: null,
+      activeBeaker: null,
+      totalDrops: 0,
+      bestScore: 0,
+      currentMissionIndex: Math.floor(Math.random() * MISSIONS.length),
+      awarded: new Set(),
+      savedSwatches: [],
+      soundReady: false,
+      albumOpen: window.innerWidth > 780,
+      sparklesLeft: 5
+    };
+
+    try {
+      const saved = JSON.parse(localStorage.getItem(STORAGE_KEY) || '{}');
+      if (Array.isArray(saved.awarded)) state.awarded = new Set(saved.awarded);
+      if (Array.isArray(saved.savedSwatches)) state.savedSwatches = saved.savedSwatches.slice(0, 18);
+          } catch (_) {}
+
+    function persist() {
+      try {
+        localStorage.setItem(STORAGE_KEY, JSON.stringify({
+          awarded: [...state.awarded],
+          savedSwatches: state.savedSwatches.slice(0, 18),
+          sparklesLeft: 5
+        }));
+      } catch (_) {}
+    }
+
+    // --- DOM ---
+    const palette = document.getElementById('palette');
+    const statusEl = document.getElementById('status');
+    const selectedDot = document.getElementById('selected-dot');
+    const selectedName = document.getElementById('selected-name');
+    const scoreMeter = document.getElementById('score-meter');
+    const scoreText = document.getElementById('score-text');
+    const targetSwatch = document.getElementById('target-swatch');
+    const missionName = document.getElementById('mission-name');
+    const stickerBook = document.getElementById('sticker-book');
+    const swatchBook = document.getElementById('swatch-book');
+    const dropStat = document.getElementById('drop-stat');
+    const stickerStat = document.getElementById('sticker-stat');
+    const swatchStat = document.getElementById('swatch-stat');
+    const toast = document.getElementById('toast');
+    const albumPanel = document.getElementById('album-panel');
+    const surpriseBtn = document.getElementById('surpriseBtn');
+
+    function setStatus(html) { statusEl.innerHTML = html; }
+
+    function showToast(message, ms = 1250) {
+      toast.innerHTML = message;
+      toast.classList.add('show');
+      clearTimeout(showToast.timer);
+      showToast.timer = setTimeout(() => toast.classList.remove('show'), ms);
+    }
+
+    function updateStats() {
+      dropStat.textContent = `방울 ${state.totalDrops}개`;
+      stickerStat.textContent = `스티커 ${state.awarded.size}개`;
+      swatchStat.textContent = `도감 ${state.savedSwatches.length}개`;
+      surpriseBtn.textContent = `✨ 반짝이 한 스푼 ${state.sparklesLeft}`;
+    }
+
+    function renderAlbum() {
+      stickerBook.innerHTML = '';
+      if (state.awarded.size === 0) {
+        const empty = document.createElement('span');
+        empty.className = 'soft';
+        empty.style.fontSize = '0.8rem';
+        empty.textContent = '미션 성공하면 스티커가 생겨요.';
+        stickerBook.appendChild(empty);
+      } else {
+        [...state.awarded].forEach(key => {
+          const m = MISSIONS.find(item => item.name === key);
+          const sticker = document.createElement('div');
+          sticker.className = 'sticker';
+          sticker.title = key;
+          sticker.textContent = m?.emoji || '⭐';
+          stickerBook.appendChild(sticker);
+        });
+      }
+
+      swatchBook.innerHTML = '';
+      if (!state.savedSwatches.length) {
+        const empty = document.createElement('span');
+        empty.className = 'soft';
+        empty.style.fontSize = '0.8rem';
+        empty.textContent = '마음에 드는 색을 저장해봐요.';
+        swatchBook.appendChild(empty);
+      } else {
+        state.savedSwatches.forEach(item => {
+          const div = document.createElement('div');
+          div.className = 'saved-swatch';
+          div.title = item.name;
+          div.style.background = item.hex;
+          swatchBook.appendChild(div);
+        });
+      }
+      updateStats();
+    }
+
+    function updateSelectedChip() {
+      const p = PIGMENTS[state.selectedId];
+      if (!p) {
+        selectedDot.style.background = '#e9eef2';
+        selectedName.textContent = '아직 없음';
+        return;
+      }
+      selectedDot.style.background = p.ui;
+      selectedName.textContent = `${p.emoji} ${p.name}`;
+    }
+
+    function selectPigment(id, btn) {
+      initAudio();
+      tinySound('pop');
+      state.selectedId = id;
+      document.querySelectorAll('.paint-btn').forEach(el => el.classList.remove('active'));
+      btn.classList.add('active');
+      updateSelectedChip();
+      const p = PIGMENTS[id];
+      if (p.isWater) setStatus(`💧 물을 골랐어! 색이 <span class="highlight">더 연하고 투명</span>해져.`);
+      else if (p.isWhite) setStatus(`🥛 흰색을 골랐어! 색이 <span class="highlight">파스텔처럼 부드럽게</span> 변해.`);
+      else if (p.isBlack) setStatus(`🖤 검정은 힘이 세! 아주 조금만 넣어도 색이 깊어져.`);
+      else setStatus(`${p.emoji} ${p.name} 선택 완료! 비커를 톡 눌러봐.`);
+    }
+
+    paletteOrder.forEach((id) => {
+      const pigment = PIGMENTS[id];
+      const btn = document.createElement('button');
+      btn.className = 'paint-btn';
+      btn.type = 'button';
+      btn.ariaLabel = pigment.name;
+      const blob = document.createElement('span');
+      blob.className = `paint-blob ${pigment.isWater ? 'water-blob' : ''}`;
+      blob.style.background = pigment.isWater ? '' : pigment.ui;
+      if (id === 'white') blob.style.border = '3px solid #dbe2e7';
+      const name = document.createElement('span');
+      name.className = 'paint-name';
+      name.textContent = pigment.name;
+      btn.appendChild(blob);
+      btn.appendChild(name);
+      btn.addEventListener('pointerdown', (e) => { e.preventDefault(); selectPigment(id, btn); });
+      palette.appendChild(btn);
+    });
+
+    // --- Sound: small WebAudio toy sounds, no external audio files ---
+    let audioCtx = null;
+    function initAudio() {
+      if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+      if (audioCtx.state === 'suspended') audioCtx.resume();
+      state.soundReady = true;
+    }
+
+    function tinySound(kind = 'pop') {
+      if (!audioCtx) return;
+      const now = audioCtx.currentTime;
+      const osc = audioCtx.createOscillator();
+      const gain = audioCtx.createGain();
+      osc.connect(gain);
+      gain.connect(audioCtx.destination);
+      if (kind === 'splash') {
+        osc.type = 'triangle';
+        osc.frequency.setValueAtTime(360, now);
+        osc.frequency.exponentialRampToValueAtTime(150, now + 0.16);
+        gain.gain.setValueAtTime(0.05, now);
+        gain.gain.exponentialRampToValueAtTime(0.001, now + 0.2);
+      } else if (kind === 'sparkle') {
+        osc.type = 'sine';
+        osc.frequency.setValueAtTime(720, now);
+        osc.frequency.exponentialRampToValueAtTime(1280, now + 0.12);
+        gain.gain.setValueAtTime(0.04, now);
+        gain.gain.exponentialRampToValueAtTime(0.001, now + 0.16);
+      } else if (kind === 'whoosh') {
+        osc.type = 'sawtooth';
+        osc.frequency.setValueAtTime(220, now);
+        osc.frequency.exponentialRampToValueAtTime(80, now + 0.22);
+        gain.gain.setValueAtTime(0.035, now);
+        gain.gain.exponentialRampToValueAtTime(0.001, now + 0.24);
+      } else {
+        osc.type = 'sine';
+        osc.frequency.setValueAtTime(520, now);
+        osc.frequency.exponentialRampToValueAtTime(840, now + 0.08);
+        gain.gain.setValueAtTime(0.035, now);
+        gain.gain.exponentialRampToValueAtTime(0.001, now + 0.11);
+      }
+      osc.start(now);
+      osc.stop(now + 0.26);
+    }
+
+    // --- Three.js scene ---
+    const scene = new THREE.Scene();
+    scene.background = new THREE.Color(0xa9e8ff);
+    scene.fog = new THREE.FogExp2(0xa9e8ff, 0.018);
+
+    const camera = new THREE.PerspectiveCamera(50, window.innerWidth / window.innerHeight, 0.1, 1000);
+    const renderer = new THREE.WebGLRenderer({ antialias: true, alpha: false });
     renderer.setSize(window.innerWidth, window.innerHeight);
-    renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+    renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 2));
     renderer.shadowMap.enabled = true;
-    renderer.outputColorSpace = THREE.SRGBColorSpace; 
+    renderer.outputColorSpace = THREE.SRGBColorSpace;
     document.body.appendChild(renderer.domElement);
 
     const controls = new OrbitControls(camera, renderer.domElement);
     controls.enableDamping = true;
-    controls.maxPolarAngle = Math.PI / 1.7; 
-    controls.minDistance = 10;
-    controls.maxDistance = 45;
-    
-    // ★ [핵심] 카메라 타겟을 비커 위치보다 아래로(Y=3.5) 설정
-    // 이렇게 하면 카메라가 아래를 보게 되어, 비커들은 화면의 '위쪽'에 배치됨
-    // 즉, 아래쪽 UI 공간을 확보하는 효과!
-    controls.target.set(0, 3.5, 0); 
+    controls.dampingFactor = 0.06;
+    controls.maxPolarAngle = Math.PI / 1.66;
+    controls.minPolarAngle = Math.PI / 5.2;
+    controls.minDistance = 12;
+    controls.maxDistance = 42;
+    controls.target.set(0, 4.8, 0);
 
-    // 초기 카메라 위치 설정 실행
+    function fitCamera() {
+      const aspect = window.innerWidth / window.innerHeight;
+      const isMobile = aspect < 0.83;
+      const distance = isMobile ? 30 / Math.max(0.58, aspect) : 25;
+      camera.position.set(0, isMobile ? 8.5 : 8.2, distance);
+      camera.aspect = aspect;
+      camera.updateProjectionMatrix();
+    }
     fitCamera();
 
-    // --- 조명 ---
-    scene.add(new THREE.AmbientLight(0xffffff, 0.5)); 
-    const sunLight = new THREE.DirectionalLight(0xFFFFFF, 1.0); 
-    sunLight.position.set(5, 15, 10);
-    sunLight.castShadow = true;
-    scene.add(sunLight);
+    scene.add(new THREE.HemisphereLight(0xffffff, 0x93c47d, 1.2));
+    const sun = new THREE.DirectionalLight(0xffffff, 1.5);
+    sun.position.set(6, 16, 9);
+    sun.castShadow = true;
+    sun.shadow.mapSize.set(2048, 2048);
+    scene.add(sun);
 
-    // --- 바닥 ---
-    const planeGeo = new THREE.PlaneGeometry(200, 200);
-    const planeMat = new THREE.MeshStandardMaterial({ color: 0x7CAE7C, roughness: 0.8 });
-    const plane = new THREE.Mesh(planeGeo, planeMat);
-    plane.rotation.x = -Math.PI / 2;
-    plane.position.y = -4;
-    plane.receiveShadow = true;
-    scene.add(plane);
+    const fillLight = new THREE.PointLight(0xfff0bb, 0.8, 30);
+    fillLight.position.set(-6, 8, 10);
+    scene.add(fillLight);
+
+    const ground = new THREE.Mesh(
+      new THREE.PlaneGeometry(220, 220),
+      new THREE.MeshStandardMaterial({ color: 0x8ccc79, roughness: 0.88 })
+    );
+    ground.rotation.x = -Math.PI / 2;
+    ground.position.y = -4.0;
+    ground.receiveShadow = true;
+    scene.add(ground);
+
+    function makeRoundedBox(width, height, depth, radius = 0.08) {
+      // Rounded illusion: plain box plus small highlight; light enough for mobile.
+      const geo = new THREE.BoxGeometry(width, height, depth, 2, 1, 2);
+      const mat = new THREE.MeshStandardMaterial({ color: 0xd7a772, roughness: 0.58, metalness: 0.02 });
+      const mesh = new THREE.Mesh(geo, mat);
+      mesh.castShadow = true;
+      mesh.receiveShadow = true;
+      return mesh;
+    }
 
     function createShelf(y) {
-        const geo = new THREE.BoxGeometry(13, 0.3, 3.5);
-        const mat = new THREE.MeshStandardMaterial({ color: 0xDEB887, roughness: 0.6 });
-        const shelf = new THREE.Mesh(geo, mat);
-        shelf.position.y = y - 1.4; 
-        shelf.receiveShadow = true;
-        shelf.castShadow = true;
-        scene.add(shelf);
+      const shelf = makeRoundedBox(13.6, 0.34, 3.7);
+      shelf.position.set(0, y - 1.45, 0);
+      scene.add(shelf);
+      const edge = new THREE.Mesh(
+        new THREE.BoxGeometry(13.8, 0.12, 0.18),
+        new THREE.MeshStandardMaterial({ color: 0xb6804f, roughness: 0.65 })
+      );
+      edge.position.set(0, y - 1.18, 1.92);
+      edge.castShadow = true;
+      scene.add(edge);
     }
-    
-    // [배치 상향] 선반 높이를 더 높게 잡음
-    // 1층: 3.5 (UI 위로 완전히 띄움)
-    // 2층: 8.5
+
     const Y_BOTTOM_ROW = 3.5;
-    const Y_TOP_ROW = 8.5;
-    createShelf(Y_BOTTOM_ROW); 
-    createShelf(Y_TOP_ROW); 
+    const Y_TOP_ROW = 8.25;
+    createShelf(Y_BOTTOM_ROW);
+    createShelf(Y_TOP_ROW);
 
-    // --- 색상 데이터 ---
-    const PIGMENTS = {
-        red:    { c:0.0, m:0.95, y:0.95, k:0.05 }, 
-        orange: { c:0.0, m:0.60, y:1.00, k:0.0 }, 
-        yellow: { c:0.0, m:0.00, y:1.00, k:0.0 },
-        green:  { c:0.9, m:0.00, y:0.90, k:0.15 },
-        mint:   { c:0.4, m:0.00, y:0.30, k:0.0 },
-        sky:    { c:0.6, m:0.10, y:0.00, k:0.0 },
-        blue:   { c:1.0, m:0.60, y:0.00, k:0.1 }, 
-        navy:   { c:1.0, m:0.90, y:0.20, k:0.4 },
-        purple: { c:0.6, m:0.90, y:0.00, k:0.1 }, 
-        pink:   { c:0.0, m:0.50, y:0.05, k:0.0 }, 
-        brown:  { c:0.3, m:0.65, y:0.90, k:0.4 },
-        grey:   { c:0.0, m:0.00, y:0.00, k:0.6 },
-        black:  { c:0.0, m:0.00, y:0.00, k:1.0 },
-        white:  { c:0.0, m:0.00, y:0.00, k:0.0 },
-        water:  { c:0.0, m:0.00, y:0.00, k:0.0, isWater: true }
-    };
+    // Decorative background: clouds and little color flags
+    const cloudMat = new THREE.MeshStandardMaterial({ color: 0xffffff, transparent: true, opacity: 0.75, roughness: 0.9 });
+    function addCloud(x, y, z, s) {
+      const group = new THREE.Group();
+      for (let i = 0; i < 5; i++) {
+        const mesh = new THREE.Mesh(new THREE.SphereGeometry(s * (0.55 + Math.random() * 0.34), 16, 10), cloudMat);
+        mesh.position.set((i - 2) * s * 0.65, Math.sin(i) * s * 0.16, Math.cos(i) * s * 0.08);
+        group.add(mesh);
+      }
+      group.position.set(x, y, z);
+      scene.add(group);
+    }
+    addCloud(-7.5, 12.5, -8, 0.8);
+    addCloud(7.4, 11.5, -9, 1.05);
+    addCloud(0.5, 14.4, -10, 0.66);
 
-    const colors = [
-        { r:200, g:0, b:0,     id: 'red' },      
-        { r:255, g:120, b:0,   id: 'orange' },   
-        { r:255, g:210, b:0,   id: 'yellow' },   
-        { r:124, g:252, b:0,   id: 'mint' },
-        { r:0, g:140, b:0,     id: 'green' },    
-        { r:0, g:191, b:255,   id: 'sky' },
-        { r:0, g:0, b:180,     id: 'blue' },     
-        { r:25, g:25, b:112,   id: 'navy' },
-        { r:128, g:0, b:128,   id: 'purple' },   
-        { r:255, g:20, b:147,  id: 'pink' },     
-        { r:139, g:69, b:19,   id: 'brown' },
-        { r:100, g:100, b:100, id: 'grey' },
-        { r:20, g:20, b:20,    id: 'black' },
-        { r:255, g:255, b:255, id: 'white' },
-        { r:240, g:248, b:255, id: 'water' }, 
-        { r:240, g:248, b:255, id: 'water' } 
-    ];
-
-    let selectedColorData = null;
     const beakers = [];
-    const MAX_DROPS = 50; 
+    const hitTargets = [];
+    const droplets = [];
+    const particles = [];
+    const sparkles = [];
 
     const B_RADIUS = 1.15;
-    const glassMaterial = new THREE.MeshPhongMaterial({
-        color: 0xffffff, opacity: 0.1, transparent: true, shininess: 100, side: THREE.DoubleSide, depthWrite: false
+    const glassMaterial = new THREE.MeshPhysicalMaterial({
+      color: 0xffffff,
+      transparent: true,
+      opacity: 0.18,
+      roughness: 0.08,
+      metalness: 0,
+      transmission: 0.32,
+      thickness: 0.15,
+      side: THREE.DoubleSide,
+      depthWrite: false
     });
-    const rimMaterial = new THREE.MeshStandardMaterial({ color: 0x444444, roughness: 0.4 }); 
+    const rimMaterial = new THREE.MeshStandardMaterial({ color: 0x5a6367, roughness: 0.32, metalness: 0.1 });
+    const activeRimMaterial = new THREE.MeshStandardMaterial({ color: 0xffd166, roughness: 0.25, metalness: 0.08, emissive: 0xffb703, emissiveIntensity: 0.15 });
 
-    const beakerBodyGeo = new THREE.CylinderGeometry(B_RADIUS, B_RADIUS * 0.95, 3.2, 32, 1, true);
-    const beakerBottomGeo = new THREE.CircleGeometry(B_RADIUS * 0.95, 32);
-    const rimGeo = new THREE.TorusGeometry(B_RADIUS, 0.05, 16, 48);
-    const liquidGeoRaw = new THREE.CylinderGeometry(B_RADIUS * 0.91, B_RADIUS * 0.88, 3.0, 32);
-    liquidGeoRaw.translate(0, 1.5, 0); 
+    const beakerBodyGeo = new THREE.CylinderGeometry(B_RADIUS, B_RADIUS * 0.94, 3.25, 48, 1, true);
+    const beakerBottomGeo = new THREE.CircleGeometry(B_RADIUS * 0.94, 48);
+    const rimGeo = new THREE.TorusGeometry(B_RADIUS, 0.052, 16, 64);
+    const liquidGeo = new THREE.CylinderGeometry(B_RADIUS * 0.90, B_RADIUS * 0.87, 3.0, 48, 1, false);
+    liquidGeo.translate(0, 1.5, 0);
+    const surfaceGeo = new THREE.CircleGeometry(B_RADIUS * 0.89, 48);
+    const meniscusGeo = new THREE.TorusGeometry(B_RADIUS * 0.89, 0.028, 10, 48);
 
-    for (let i = 0; i < 8; i++) {
-        const beakerGroup = new THREE.Group();
-        
-        beakerGroup.add(new THREE.Mesh(beakerBodyGeo, glassMaterial));
-        const bottom = new THREE.Mesh(beakerBottomGeo, glassMaterial);
-        bottom.rotation.x = -Math.PI / 2; bottom.position.y = -1.6; beakerGroup.add(bottom);
-        const topRim = new THREE.Mesh(rimGeo, rimMaterial);
-        topRim.rotation.x = Math.PI / 2; topRim.position.y = 1.6; beakerGroup.add(topRim);
+    function createBeaker(i) {
+      const group = new THREE.Group();
+      const body = new THREE.Mesh(beakerBodyGeo, glassMaterial);
+      body.castShadow = true;
+      group.add(body);
 
-        const liqMat = new THREE.MeshStandardMaterial({ 
-            color: 0xffffff, transparent: true, opacity: 0.96, roughness: 0.25, metalness: 0.0,
-            emissive: 0x000000, emissiveIntensity: 0.15 
-        });
-        const liquid = new THREE.Mesh(liquidGeoRaw, liqMat);
-        liquid.position.y = -1.58; 
-        liquid.scale.y = 0.001; 
-        beakerGroup.add(liquid);
+      const bottom = new THREE.Mesh(beakerBottomGeo, glassMaterial);
+      bottom.rotation.x = -Math.PI / 2;
+      bottom.position.y = -1.625;
+      group.add(bottom);
 
-        const uiGroup = document.createElement('div');
-        uiGroup.className = 'beaker-ui-group';
-        const label = document.createElement('div');
-        label.className = 'beaker-label';
-        label.innerText = `0`;
-        const btn = document.createElement('div');
-        btn.className = 'beaker-reset-btn';
-        btn.innerHTML = '🗑️'; 
-        btn.onclick = (e) => { e.stopPropagation(); playSound(sfxWhoosh); resetBeaker(beakerGroup); };
+      const topRim = new THREE.Mesh(rimGeo, rimMaterial);
+      topRim.rotation.x = Math.PI / 2;
+      topRim.position.y = 1.62;
+      group.add(topRim);
 
-        uiGroup.appendChild(label); uiGroup.appendChild(btn);
-        document.body.appendChild(uiGroup); 
+      const lowerRim = new THREE.Mesh(rimGeo, rimMaterial);
+      lowerRim.rotation.x = Math.PI / 2;
+      lowerRim.position.y = -1.57;
+      lowerRim.scale.set(0.95, 0.95, 0.95);
+      group.add(lowerRim);
 
-        // [배치 적용] 상단 상수값 적용
-        const isTopRow = i >= 4; const col = i % 4;
-        beakerGroup.position.x = (col - 1.5) * 2.8; 
-        beakerGroup.position.y = isTopRow ? Y_TOP_ROW : Y_BOTTOM_ROW;
-        
-        beakerGroup.userData = { 
-            id: i, drops: [], liquidMesh: liquid, uiGroup: uiGroup, label: label,
-            initialRotation: beakerGroup.rotation.clone(),
-            wobbleNeed: false
-        };
-        scene.add(beakerGroup);
-        beakers.push(beakerGroup);
+      const liquidMat = new THREE.MeshPhysicalMaterial({
+        color: 0xffffff,
+        transparent: true,
+        opacity: 0,
+        roughness: 0.18,
+        metalness: 0.0,
+        clearcoat: 0.35,
+        clearcoatRoughness: 0.2,
+        emissive: 0x000000,
+        emissiveIntensity: 0.08
+      });
+      const liquid = new THREE.Mesh(liquidGeo, liquidMat);
+      liquid.position.y = -1.58;
+      liquid.scale.y = 0.001;
+      liquid.castShadow = true;
+      liquid.receiveShadow = true;
+      group.add(liquid);
+
+      const surfaceMat = new THREE.MeshPhysicalMaterial({
+        color: 0xffffff,
+        transparent: true,
+        opacity: 0,
+        roughness: 0.05,
+        metalness: 0,
+        clearcoat: 1,
+        clearcoatRoughness: 0.05,
+        side: THREE.DoubleSide
+      });
+      const surface = new THREE.Mesh(surfaceGeo, surfaceMat);
+      surface.rotation.x = -Math.PI / 2;
+      surface.position.y = -1.55;
+      group.add(surface);
+
+      const meniscus = new THREE.Mesh(meniscusGeo, surfaceMat);
+      meniscus.rotation.x = Math.PI / 2;
+      meniscus.position.y = -1.55;
+      group.add(meniscus);
+
+      const bubbleGroup = new THREE.Group();
+      const bubbleMat = new THREE.MeshStandardMaterial({ color: 0xffffff, transparent: true, opacity: 0.36, roughness: 0.1 });
+      for (let j = 0; j < 9; j++) {
+        const bubble = new THREE.Mesh(new THREE.SphereGeometry(0.045 + Math.random() * 0.035, 10, 8), bubbleMat);
+        const angle = Math.random() * Math.PI * 2;
+        const rad = Math.sqrt(Math.random()) * 0.78;
+        bubble.position.set(Math.cos(angle) * rad, -1.1 + Math.random() * 2.3, Math.sin(angle) * rad);
+        bubble.userData.floatSpeed = 0.25 + Math.random() * 0.45;
+        bubble.userData.baseY = bubble.position.y;
+        bubbleGroup.add(bubble);
+      }
+      bubbleGroup.visible = false;
+      group.add(bubbleGroup);
+
+      const hit = new THREE.Mesh(
+        new THREE.CylinderGeometry(B_RADIUS * 1.05, B_RADIUS * 1.05, 3.6, 24),
+        new THREE.MeshBasicMaterial({ transparent: true, opacity: 0, depthWrite: false })
+      );
+      hit.position.y = 0;
+      hit.userData.beaker = group;
+      group.add(hit);
+      hitTargets.push(hit);
+
+      const uiGroup = document.createElement('div');
+      uiGroup.className = 'beaker-ui-group';
+      const label = document.createElement('div');
+      label.className = 'beaker-label';
+      label.textContent = '빈 비커';
+      const reset = document.createElement('button');
+      reset.className = 'beaker-reset-btn';
+      reset.type = 'button';
+      reset.innerHTML = '🧽';
+      reset.title = '이 비커 비우기';
+      reset.addEventListener('pointerdown', (e) => {
+        e.preventDefault(); e.stopPropagation(); initAudio(); tinySound('whoosh'); resetBeaker(group);
+      });
+      uiGroup.appendChild(label);
+      uiGroup.appendChild(reset);
+      document.body.appendChild(uiGroup);
+
+      const isTopRow = i >= 4;
+      const col = i % 4;
+      group.position.x = (col - 1.5) * 2.85;
+      group.position.y = isTopRow ? Y_TOP_ROW : Y_BOTTOM_ROW;
+      group.position.z = isTopRow ? -0.15 : 0.12;
+
+      group.userData = {
+        id: i,
+        drops: [],
+        mix: mixDrops([]),
+        liquid,
+        surface,
+        meniscus,
+        bubbleGroup,
+        topRim,
+        lowerRim,
+        uiGroup,
+        label,
+        initialRotation: group.rotation.clone(),
+        wobbleUntil: 0,
+        wobbleStart: 0,
+        stirUntil: 0,
+        fillScale: 0.001,
+        activePulse: 0,
+        sparkle: 0
+      };
+
+      scene.add(group);
+      beakers.push(group);
+      return group;
     }
 
-    function getMixedColor(drops) {
-        if (drops.length === 0) return { r: 1, g: 1, b: 1, a: 0 }; 
-        
-        let sumC = 0, sumM = 0, sumY = 0, sumK = 0;
-        let waterCount = 0;
-        drops.forEach(d => {
-            const p = PIGMENTS[d.id];
-            if (p.isWater) waterCount++;
-            else { sumC += p.c; sumM += p.m; sumY += p.y; sumK += p.k; }
-        });
+    for (let i = 0; i < 8; i++) createBeaker(i);
+    state.activeBeaker = beakers[0];
+    setActiveBeaker(beakers[0], false);
 
-        const totalDrops = drops.length;
-        const c = sumC / totalDrops; const m = sumM / totalDrops; const y = sumY / totalDrops; const k = sumK / totalDrops;
-        let r = 255 * (1 - c) * (1 - k); let g = 255 * (1 - m) * (1 - k); let b = 255 * (1 - y) * (1 - k);
-        r = Math.max(0, Math.min(255, r)) / 255; g = Math.max(0, Math.min(255, g)) / 255; b = Math.max(0, Math.min(255, b)) / 255;
-
-        let op;
-        if (sumC+sumM+sumY+sumK === 0 && waterCount > 0) op = 0.25; 
-        else { const pigmentRatio = (totalDrops - waterCount) / totalDrops; op = 0.8 + (pigmentRatio * 0.2); }
-        return { r: r, g: g, b: b, a: op };
+    function setActiveBeaker(group, announce = true) {
+      state.activeBeaker = group;
+      beakers.forEach(b => {
+        const active = b === group;
+        b.userData.topRim.material = active ? activeRimMaterial : rimMaterial;
+        b.userData.lowerRim.material = active ? activeRimMaterial : rimMaterial;
+      });
+      if (announce) {
+        const mix = group.userData.mix;
+        setStatus(`비커 ${group.userData.id + 1} 선택! 지금 색은 <span class="highlight">${mix.name}</span>`);
+      }
     }
 
-    function resetBeaker(beakerGroup) {
-        const data = beakerGroup.userData;
-        data.drops = [];
-        data.liquidMesh.material.color.setRGB(1, 1, 1);
-        data.liquidMesh.material.emissive.setHex(0x000000);
-        data.liquidMesh.material.opacity = 0;
-        data.liquidMesh.scale.y = 0.001;
-        data.label.innerText = `0`;
+    function updateBeakerVisual(group) {
+      const data = group.userData;
+      const mixed = mixDrops(data.drops);
+      data.mix = mixed;
+      data.fillScale = mixed.fill;
+
+      data.liquid.material.color.setRGB(mixed.rgb.r, mixed.rgb.g, mixed.rgb.b);
+      data.liquid.material.opacity = mixed.opacity;
+      data.liquid.material.emissive.setRGB(mixed.rgb.r * 0.22, mixed.rgb.g * 0.22, mixed.rgb.b * 0.22);
+
+      data.surface.material.color.setRGB(clamp(mixed.rgb.r + 0.07), clamp(mixed.rgb.g + 0.07), clamp(mixed.rgb.b + 0.07));
+      data.surface.material.opacity = clamp(mixed.opacity + 0.1, 0, 0.96);
+      data.meniscus.material.color.copy(data.surface.material.color);
+      data.meniscus.material.opacity = data.surface.material.opacity;
+
+      data.bubbleGroup.visible = data.drops.length > 0 && (data.drops.includes('water') || data.drops.length < 5);
+      data.label.textContent = data.drops.length ? `${data.drops.length}방울 · ${mixed.name}` : '빈 비커';
+
+      const fillHeight = 3.0 * data.fillScale;
+      const surfaceY = -1.58 + fillHeight;
+      data.surface.position.y = surfaceY;
+      data.meniscus.position.y = surfaceY + 0.012;
+      data.surface.scale.setScalar(clamp(0.55 + data.fillScale * 0.45, 0.55, 1.0));
+      data.meniscus.scale.setScalar(clamp(0.55 + data.fillScale * 0.45, 0.55, 1.0));
+
+      updateMissionScore(group);
     }
 
-    function updateBeakerUIPosition(beakerGroup) {
-        const vector = new THREE.Vector3();
-        beakerGroup.localToWorld(vector.set(0, -2.2, 0)); 
-        vector.project(camera);
-        const x = (vector.x * 0.5 + 0.5) * window.innerWidth;
-        const y = (-vector.y * 0.5 + 0.5) * window.innerHeight;
-        const ui = beakerGroup.userData.uiGroup;
-        ui.style.left = `${x}px`; ui.style.top = `${y}px`;
+    function resetBeaker(group) {
+      const data = group.userData;
+      state.totalDrops = Math.max(0, state.totalDrops - data.drops.length);
+      data.drops = [];
+      data.mix = mixDrops([]);
+      data.fillScale = 0.001;
+      data.liquid.material.opacity = 0;
+      data.surface.material.opacity = 0;
+      data.liquid.scale.y = 0.001;
+      data.surface.position.y = -1.55;
+      data.meniscus.position.y = -1.55;
+      data.bubbleGroup.visible = false;
+      data.label.textContent = '빈 비커';
+      data.wobbleUntil = performance.now() + 320;
+      data.wobbleStart = performance.now();
+      if (state.activeBeaker === group) updateMissionScore(group);
+      updateStats();
+      setStatus(`비커 ${data.id + 1}을 깨끗하게 씻었어! ✨`);
     }
 
-    const palette = document.getElementById('palette');
-    const status = document.getElementById('status');
+    function resetAll() {
+      initAudio(); tinySound('whoosh');
+      beakers.forEach(resetBeaker);
+      state.bestScore = 0;
+      updateMissionScore(state.activeBeaker);
+      setStatus('모든 비커를 깨끗하게 비웠어. 다시 실험 시작! 🧼');
+    }
 
-    colors.forEach((c, i) => {
-        const btn = document.createElement('div');
-        btn.className = 'color-drop';
-        if (i >= 14) btn.classList.add('water');
-        else {
-            btn.style.backgroundColor = `rgb(${c.r},${c.g},${c.b})`;
-            if (c.r > 240 && c.g > 240 && c.b > 240) btn.style.border = '2px solid #ccc';
-        }
-        btn.onpointerdown = () => {
-            playSound(sfxPop); 
-            document.querySelectorAll('.color-drop').forEach(b => b.classList.remove('active'));
-            btn.classList.add('active');
-            selectedColorData = { ...c };
-            if (c.id === 'water') status.innerHTML = "투명한 물! 색을 연하게 해줘.";
-            else status.innerHTML = "선택 완료! 비커에 넣어봐!";
-        };
-        palette.appendChild(btn);
-    });
+    function addDropToBeaker(group, id, animate = true) {
+      const data = group.userData;
+      if (data.drops.length >= MAX_DROPS) {
+        setStatus('이 비커는 가득 찼어! 다른 비커를 써보자. 🧪');
+        return;
+      }
+      setActiveBeaker(group, false);
+      data.drops.push(id);
+      state.totalDrops += 1;
+      updateStats();
+      updateBeakerVisual(group);
+      data.wobbleStart = performance.now();
+      data.wobbleUntil = data.wobbleStart + 450;
+      tinySound(id === 'water' ? 'splash' : 'pop');
 
-    document.getElementById('resetAllBtn').onclick = () => { playSound(sfxWhoosh); beakers.forEach(b => resetBeaker(b)); };
+      const p = PIGMENTS[id];
+      if (animate) createFallingDrop(group, p);
+      createSplash(group, p, 8 + Math.floor(Math.random() * 6));
+      const msg = p.isWater ? '물이 들어가서 색이 더 맑아졌어!' : `${p.name} 한 방울! 지금은 ${data.mix.name}`;
+      setStatus(`${p.emoji} ${msg}`);
+    }
+
+    function stirBeaker(group) {
+      if (!group) return;
+      initAudio(); tinySound('splash');
+      const data = group.userData;
+      data.stirUntil = performance.now() + 1100;
+      data.wobbleStart = performance.now();
+      data.wobbleUntil = data.wobbleStart + 1100;
+      createSparkles(group, 18, data.mix.rgb);
+      setStatus(`빙글빙글! ${data.mix.name}이 더 잘 섞였어. 🥄`);
+    }
+
+    function addSurpriseSparkle() {
+      if (!state.activeBeaker) return;
+      initAudio();
+      if (state.sparklesLeft <= 0) {
+        showToast('반짝이는 오늘 다 썼어! 그래도 색은 계속 만들 수 있어 ✨');
+        return;
+      }
+      const data = state.activeBeaker.userData;
+      if (!data.drops.length) {
+        setStatus('먼저 비커에 색을 조금 넣어줘! 빈 비커에는 반짝이가 숨어버려.');
+        return;
+      }
+      state.sparklesLeft -= 1;
+      persist(); updateStats();
+      tinySound('sparkle');
+      data.sparkle = Math.min(1, data.sparkle + 0.55);
+      createSparkles(state.activeBeaker, 35, data.mix.rgb);
+      showToast('✨ 반짝이 마법 성공! ✨');
+    }
+
+    function saveActiveColor() {
+      if (!state.activeBeaker) return;
+      initAudio(); tinySound('sparkle');
+      const data = state.activeBeaker.userData;
+      if (!data.drops.length) {
+        setStatus('빈 비커는 저장할 색이 없어. 먼저 물감을 섞어봐!');
+        return;
+      }
+      const item = { hex: rgbToHex(data.mix.rgb), name: data.mix.name };
+      state.savedSwatches.unshift(item);
+      state.savedSwatches = state.savedSwatches.slice(0, 18);
+      persist(); renderAlbum();
+      showToast(`📒 ${item.name}<br>색 도감에 저장했어!`);
+    }
 
     const raycaster = new THREE.Raycaster();
     const mouse = new THREE.Vector2();
 
     window.addEventListener('pointerdown', (e) => {
-        if (e.target.closest('#ui-container') || e.target.closest('.beaker-reset-btn')) return;
-        if (!selectedColorData) { status.innerHTML = "<span class='highlight'>색깔을 먼저 골라줘!</span>"; return; }
+      if (e.target.closest('#ui-container') || e.target.closest('#mission-card') || e.target.closest('#album-panel') || e.target.closest('.beaker-reset-btn')) return;
+      initAudio();
 
-        mouse.x = (e.clientX / window.innerWidth) * 2 - 1;
-        mouse.y = -(e.clientY / window.innerHeight) * 2 + 1;
-        raycaster.setFromCamera(mouse, camera);
+      mouse.x = (e.clientX / window.innerWidth) * 2 - 1;
+      mouse.y = -(e.clientY / window.innerHeight) * 2 + 1;
+      raycaster.setFromCamera(mouse, camera);
+      const intersects = raycaster.intersectObjects(hitTargets, true);
+      if (!intersects.length) return;
+      const group = intersects[0].object.userData.beaker;
+      if (!group) return;
 
-        const intersects = raycaster.intersectObjects(beakers, true);
-        if (intersects.length > 0) {
-            let targetGroup = intersects[0].object;
-            while(targetGroup && !targetGroup.userData.drops) targetGroup = targetGroup.parent;
-
-            if (targetGroup) {
-                const data = targetGroup.userData;
-                if (data.drops.length < MAX_DROPS) {
-                    playSound(sfxSplash); 
-                    data.wobbleNeed = true; data.wobbleStartTime = Date.now();
-                    data.drops.push({ ...selectedColorData });
-                    
-                    const mixed = getMixedColor(data.drops);
-                    data.liquidMesh.material.color.setRGB(mixed.r, mixed.g, mixed.b);
-                    data.liquidMesh.material.emissive.setRGB(mixed.r, mixed.g, mixed.b);
-                    data.liquidMesh.material.opacity = mixed.a;
-
-                    const fillRatio = data.drops.length / MAX_DROPS;
-                    data.liquidMesh.scale.y = Math.max(0.15, fillRatio); 
-                    data.label.innerText = `${data.drops.length}`;
-                    status.innerText = "잘했어! 하윤!";
-                } else {
-                    status.innerText = "가득 찼어!";
-                }
-            }
-        }
+      if (!state.selectedId) {
+        setActiveBeaker(group);
+        setStatus(`<span class="highlight">물감을 먼저 골라줘!</span> 그 다음 비커를 톡 누르면 들어가.`);
+        tinySound('pop');
+        return;
+      }
+      addDropToBeaker(group, state.selectedId, true);
     });
 
-    function animate() {
-        requestAnimationFrame(animate);
-        controls.update();
-        const now = Date.now();
-        beakers.forEach(b => {
-            if(b.userData.wobbleNeed) {
-                const elapsed = now - b.userData.wobbleStartTime;
-                if (elapsed < 300) { 
-                    const intensity = 0.05 * (1 - elapsed / 300);
-                    b.rotation.x = b.userData.initialRotation.x + Math.sin(elapsed * 0.05) * intensity;
-                } else {
-                    b.rotation.copy(b.userData.initialRotation); 
-                    b.userData.wobbleNeed = false;
-                }
-            }
-            updateBeakerUIPosition(b);
-        });
-        renderer.render(scene, camera);
+    function createFallingDrop(group, pigment) {
+      const world = new THREE.Vector3();
+      group.getWorldPosition(world);
+      const color = pigment.isWater ? hexToRgbFloat('#bff3ff') : hexToRgbFloat(pigment.ui);
+      const mat = new THREE.MeshStandardMaterial({
+        color: new THREE.Color(color.r, color.g, color.b),
+        roughness: 0.22,
+        metalness: 0,
+        transparent: true,
+        opacity: 0.95
+      });
+      const drop = new THREE.Mesh(new THREE.SphereGeometry(0.17, 18, 12), mat);
+      drop.scale.set(0.85, 1.25, 0.85);
+      drop.position.set(world.x + (Math.random() - 0.5) * 0.45, world.y + 4.2, world.z + 0.08 + (Math.random() - 0.5) * 0.25);
+      drop.userData = {
+        born: performance.now(),
+        duration: 520,
+        from: drop.position.clone(),
+        to: new THREE.Vector3(world.x, world.y + 1.53, world.z + 0.08)
+      };
+      scene.add(drop);
+      droplets.push(drop);
     }
-    animate();
 
-    window.addEventListener('resize', () => {
-        camera.aspect = window.innerWidth / window.innerHeight;
-        camera.updateProjectionMatrix();
-        renderer.setSize(window.innerWidth, window.innerHeight);
-        // 화면 크기 바뀔 때마다 카메라 거리 재조정
-        fitCamera();
+    function createSplash(group, pigment, count = 10) {
+      const data = group.userData;
+      const world = new THREE.Vector3();
+      group.getWorldPosition(world);
+      const colorRgb = pigment.isWater ? { r: 0.75, g: 0.95, b: 1 } : hexToRgbFloat(pigment.ui);
+      const mat = new THREE.MeshStandardMaterial({
+        color: new THREE.Color(colorRgb.r, colorRgb.g, colorRgb.b),
+        transparent: true,
+        opacity: 0.72,
+        roughness: 0.3
+      });
+      const surfaceY = world.y - 1.58 + 3.0 * data.fillScale + 0.04;
+      for (let i = 0; i < count; i++) {
+        const dot = new THREE.Mesh(new THREE.SphereGeometry(0.035 + Math.random() * 0.035, 8, 6), mat.clone());
+        const angle = Math.random() * Math.PI * 2;
+        const speed = 0.018 + Math.random() * 0.03;
+        dot.position.set(world.x, surfaceY, world.z);
+        dot.userData.velocity = new THREE.Vector3(Math.cos(angle) * speed, 0.045 + Math.random() * 0.035, Math.sin(angle) * speed);
+        dot.userData.born = performance.now();
+        dot.userData.life = 520 + Math.random() * 240;
+        scene.add(dot);
+        particles.push(dot);
+      }
+    }
+
+    function createSparkles(group, count = 16, rgb = { r: 1, g: 0.9, b: 0.5 }) {
+      const data = group.userData;
+      const world = new THREE.Vector3();
+      group.getWorldPosition(world);
+      const color = new THREE.Color(clamp(rgb.r + 0.25), clamp(rgb.g + 0.25), clamp(rgb.b + 0.25));
+      for (let i = 0; i < count; i++) {
+        const geo = new THREE.TetrahedronGeometry(0.055 + Math.random() * 0.045);
+        const mat = new THREE.MeshStandardMaterial({ color, emissive: color, emissiveIntensity: 0.9, roughness: 0.28, transparent: true, opacity: 1 });
+        const star = new THREE.Mesh(geo, mat);
+        const angle = Math.random() * Math.PI * 2;
+        const radius = Math.random() * 0.95;
+        const surfaceY = world.y - 1.58 + 3 * data.fillScale + 0.22 + Math.random() * 0.9;
+        star.position.set(world.x + Math.cos(angle) * radius, surfaceY, world.z + Math.sin(angle) * radius);
+        star.userData.velocity = new THREE.Vector3(Math.cos(angle) * 0.01, 0.018 + Math.random() * 0.02, Math.sin(angle) * 0.01);
+        star.userData.born = performance.now();
+        star.userData.life = 900 + Math.random() * 500;
+        scene.add(star);
+        sparkles.push(star);
+      }
+    }
+
+    function updateBeakerUIPosition(group) {
+      const vector = new THREE.Vector3();
+      group.localToWorld(vector.set(0, -2.22, 0));
+      vector.project(camera);
+      const x = (vector.x * 0.5 + 0.5) * window.innerWidth;
+      const y = (-vector.y * 0.5 + 0.5) * window.innerHeight;
+      const ui = group.userData.uiGroup;
+      const visible = vector.z < 1 && y > 0 && y < window.innerHeight;
+      ui.style.display = visible ? 'flex' : 'none';
+      ui.style.left = `${x}px`;
+      ui.style.top = `${y}px`;
+    }
+
+    function animateTransientMeshes(now) {
+      for (let i = droplets.length - 1; i >= 0; i--) {
+        const drop = droplets[i];
+        const t = clamp((now - drop.userData.born) / drop.userData.duration);
+        const eased = t * t;
+        drop.position.lerpVectors(drop.userData.from, drop.userData.to, eased);
+        drop.rotation.x += 0.08;
+        drop.rotation.z += 0.05;
+        drop.scale.y = lerp(1.25, 0.72, t);
+        if (t >= 1) {
+          scene.remove(drop);
+          droplets.splice(i, 1);
+        }
+      }
+
+      for (let i = particles.length - 1; i >= 0; i--) {
+        const p = particles[i];
+        const age = now - p.userData.born;
+        p.userData.velocity.y -= 0.0032;
+        p.position.add(p.userData.velocity);
+        p.material.opacity = clamp(1 - age / p.userData.life, 0, 0.72);
+        if (age > p.userData.life) {
+          scene.remove(p);
+          particles.splice(i, 1);
+        }
+      }
+
+      for (let i = sparkles.length - 1; i >= 0; i--) {
+        const s = sparkles[i];
+        const age = now - s.userData.born;
+        s.position.add(s.userData.velocity);
+        s.rotation.x += 0.06;
+        s.rotation.y += 0.08;
+        s.material.opacity = clamp(1 - age / s.userData.life, 0, 1);
+        s.scale.setScalar(1 + Math.sin(age * 0.014) * 0.23);
+        if (age > s.userData.life) {
+          scene.remove(s);
+          sparkles.splice(i, 1);
+        }
+      }
+    }
+
+    function animateBeakers(now) {
+      beakers.forEach(group => {
+        const data = group.userData;
+        data.liquid.scale.y = lerp(data.liquid.scale.y, Math.max(0.001, data.fillScale), 0.14);
+
+        const fillHeight = 3.0 * data.liquid.scale.y;
+        const surfaceY = -1.58 + fillHeight;
+        const wave = data.drops.length ? Math.sin(now * 0.004 + data.id) * 0.012 : 0;
+        data.surface.position.y = surfaceY + wave;
+        data.meniscus.position.y = surfaceY + 0.015 + wave;
+
+        if (data.bubbleGroup.visible) {
+          data.bubbleGroup.children.forEach((bubble, j) => {
+            const span = Math.max(0.3, 2.8 * data.liquid.scale.y);
+            bubble.position.y = -1.42 + ((now * 0.0002 * bubble.userData.floatSpeed + j * 0.13) % 1) * span;
+            bubble.material.opacity = 0.18 + Math.sin(now * 0.003 + j) * 0.08 + 0.18;
+          });
+        }
+
+        const baseRotZ = group === state.activeBeaker ? Math.sin(now * 0.005) * 0.012 : 0;
+        if (now < data.stirUntil) {
+          const t = clamp((data.stirUntil - now) / 1100);
+          data.surface.rotation.z += 0.19 * t;
+          data.meniscus.rotation.z += 0.18 * t;
+          data.liquid.rotation.y += 0.05 * t;
+        } else {
+          data.liquid.rotation.y *= 0.97;
+        }
+
+        if (now < data.wobbleUntil) {
+          const elapsed = now - data.wobbleStart;
+          const t = clamp(1 - elapsed / Math.max(1, data.wobbleUntil - data.wobbleStart));
+          const intensity = 0.10 * t;
+          group.rotation.x = data.initialRotation.x + Math.sin(elapsed * 0.026) * intensity;
+          group.rotation.z = data.initialRotation.z + Math.sin(elapsed * 0.033) * intensity * 0.7 + baseRotZ;
+        } else {
+          group.rotation.x = lerp(group.rotation.x, data.initialRotation.x, 0.14);
+          group.rotation.z = lerp(group.rotation.z, data.initialRotation.z + baseRotZ, 0.14);
+        }
+
+        if (data.sparkle > 0) {
+          data.liquid.material.emissiveIntensity = 0.1 + data.sparkle * (0.18 + Math.sin(now * 0.012) * 0.05);
+          data.sparkle *= 0.998;
+        } else {
+          data.liquid.material.emissiveIntensity = 0.08;
+        }
+
+        updateBeakerUIPosition(group);
+      });
+    }
+
+    function currentMission() { return MISSIONS[state.currentMissionIndex]; }
+
+    function setMission(index) {
+      state.currentMissionIndex = ((index % MISSIONS.length) + MISSIONS.length) % MISSIONS.length;
+      state.bestScore = 0;
+      const m = currentMission();
+      targetSwatch.style.background = rgbToCss(m.target);
+      missionName.textContent = `${m.emoji} ${m.name}`;
+      updateMissionScore(state.activeBeaker, false);
+    }
+
+    function newMission() {
+      initAudio(); tinySound('sparkle');
+      let next = Math.floor(Math.random() * MISSIONS.length);
+      if (next === state.currentMissionIndex) next = (next + 1) % MISSIONS.length;
+      setMission(next);
+      showToast(`${currentMission().emoji} 새 미션!<br>${currentMission().name}`);
+    }
+
+    function updateMissionScore(group, allowAward = true) {
+      const m = currentMission();
+      if (!group || !group.userData.drops.length) {
+        scoreMeter.style.width = '0%';
+        scoreText.textContent = '비커에 색을 섞으면 목표 색과 비교해요.';
+        return;
+      }
+      const mix = group.userData.mix;
+      const dist = rgbDistance(mix.rgb, m.target);
+      const score = Math.round(clamp(100 - dist * 118, 0, 100));
+      state.bestScore = Math.max(state.bestScore, score);
+      scoreMeter.style.width = `${score}%`;
+      const face = score >= 94 ? '🏆' : score >= 86 ? '⭐' : score >= 70 ? '👏' : score >= 48 ? '🙂' : '🧪';
+      scoreText.textContent = `${face} 비커 ${group.userData.id + 1}: ${score}점 · 최고 ${state.bestScore}점`;
+      if (allowAward && score >= 92 && !state.awarded.has(m.name)) {
+        state.awarded.add(m.name);
+        persist(); renderAlbum();
+        createSparkles(group, 42, m.target);
+        showToast(`🎉 미션 성공!<br>${m.emoji} 스티커를 받았어!`, 1600);
+      }
+    }
+
+    function showHint() {
+      initAudio(); tinySound('pop');
+      const m = currentMission();
+      showToast(`💡 힌트<br>${m.hint}`, 2200);
+    }
+
+    // Buttons
+    document.getElementById('resetAllBtn').addEventListener('pointerdown', (e) => { e.preventDefault(); resetAll(); });
+    document.getElementById('stirBtn').addEventListener('pointerdown', (e) => { e.preventDefault(); stirBeaker(state.activeBeaker); });
+    document.getElementById('saveColorBtn').addEventListener('pointerdown', (e) => { e.preventDefault(); saveActiveColor(); });
+    document.getElementById('surpriseBtn').addEventListener('pointerdown', (e) => { e.preventDefault(); addSurpriseSparkle(); });
+    document.getElementById('newMissionBtn').addEventListener('pointerdown', (e) => { e.preventDefault(); newMission(); });
+    document.getElementById('hintBtn').addEventListener('pointerdown', (e) => { e.preventDefault(); showHint(); });
+    document.getElementById('toggleAlbumBtn').addEventListener('pointerdown', (e) => {
+      e.preventDefault();
+      initAudio();
+      state.albumOpen = !state.albumOpen;
+      albumPanel.classList.toggle('hidden', !state.albumOpen);
+      tinySound('pop');
     });
-</script>
+
+    // Resize
+    window.addEventListener('resize', () => {
+      fitCamera();
+      renderer.setSize(window.innerWidth, window.innerHeight);
+    });
+
+    // Initial mission + album
+    setMission(state.currentMissionIndex);
+    renderAlbum();
+    albumPanel.classList.toggle('hidden', !state.albumOpen);
+    updateSelectedChip();
+    updateStats();
+
+    // A small auto demo sparkle on the first beaker after loading, without altering game state.
+    setTimeout(() => {
+      if (state.totalDrops === 0) createSparkles(beakers[0], 8, { r: 1, g: 0.86, b: 0.25 });
+    }, 600);
+
+    function animate(now) {
+      requestAnimationFrame(animate);
+      controls.update();
+      animateTransientMeshes(now);
+      animateBeakers(now);
+      renderer.render(scene, camera);
+    }
+    requestAnimationFrame(animate);
+  </script>
 </body>
 </html>
