@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
-  <title>하윤의 물감 마법 연구소 PLUS</title>
+  <title>하윤의 물감 마법 연구소 PLUS - 리얼 색상 보정</title>
   <style>
     :root {
       --cream: #fff7df;
@@ -683,102 +683,176 @@
       return `${tiny}${adj} ${noun}색`;
     }
 
+    const PAINT_WATER_RGB = { r: 0.86, g: 0.97, b: 1.0 };
+    const PAPER_WHITE_RGB = { r: 0.985, g: 0.982, b: 0.955 };
+    const TRUE_BLACK_RGB = { r: 0.035, g: 0.034, b: 0.033 };
+
+    function lerpRgb(a, b, t) {
+      return {
+        r: lerp(a.r, b.r, t),
+        g: lerp(a.g, b.g, t),
+        b: lerp(a.b, b.b, t)
+      };
+    }
+
+    function srgbToLinearChannel(v) {
+      v = clamp(v);
+      return v <= 0.04045 ? v / 12.92 : Math.pow((v + 0.055) / 1.055, 2.4);
+    }
+
+    function linearToSrgbChannel(v) {
+      v = clamp(v);
+      return v <= 0.0031308 ? 12.92 * v : 1.055 * Math.pow(v, 1 / 2.4) - 0.055;
+    }
+
+    function rgbToLinear(rgb) {
+      return {
+        r: srgbToLinearChannel(rgb.r),
+        g: srgbToLinearChannel(rgb.g),
+        b: srgbToLinearChannel(rgb.b)
+      };
+    }
+
+    function linearToRgb(rgb) {
+      return {
+        r: linearToSrgbChannel(rgb.r),
+        g: linearToSrgbChannel(rgb.g),
+        b: linearToSrgbChannel(rgb.b)
+      };
+    }
+
+    function mixByOpticalDensity(entries) {
+      // 물감이 빛을 "흡수"하는 느낌을 흉내 낸다.
+      // 같은 색만 넣으면 팔레트 색이 그대로 유지되고, 다른 색끼리는 자연스럽게 탁해진다.
+      if (!entries.length) return { r: 1, g: 1, b: 1 };
+      const eps = 0.0008;
+      const logSum = { r: 0, g: 0, b: 0 };
+      const total = entries.reduce((acc, item) => acc + item.weight, 0) || 1;
+      entries.forEach((item) => {
+        const lin = rgbToLinear(item.rgb);
+        logSum.r += item.weight * Math.log(Math.max(eps, lin.r));
+        logSum.g += item.weight * Math.log(Math.max(eps, lin.g));
+        logSum.b += item.weight * Math.log(Math.max(eps, lin.b));
+      });
+      return linearToRgb({
+        r: Math.exp(logSum.r / total),
+        g: Math.exp(logSum.g / total),
+        b: Math.exp(logSum.b / total)
+      });
+    }
+
     function mixDrops(drops) {
       if (!drops.length) {
         return {
           rgb: { r: 1, g: 1, b: 1 },
           opacity: 0,
           fill: 0.001,
-          name: '빈 비커',
-          spectrum: Array(BAND_COUNT).fill(1)
+          name: '빈 비커'
         };
       }
 
-      let water = 0;
-      let pigmentWeight = 0;
       const counts = {};
-      const weightedLogs = Array(BAND_COUNT).fill(0);
+      drops.forEach(id => { counts[id] = (counts[id] || 0) + 1; });
 
-      drops.forEach(id => {
-        counts[id] = (counts[id] || 0) + 1;
-        const pigment = PIGMENTS[id];
-        if (!pigment || pigment.isWater) { water += 1; return; }
-        const w = pigment.strength || 1;
-        pigmentWeight += w;
-        pigment.spectrum.forEach((band, i) => {
-          weightedLogs[i] += w * Math.log(Math.max(0.012, band));
-        });
-      });
-
-      if (pigmentWeight <= 0) {
-        const opacity = clamp(0.18 + water * 0.02, 0.18, 0.32);
-        return {
-          rgb: { r: 0.86, g: 0.97, b: 1.0 },
-          opacity,
-          fill: clamp(drops.length / MAX_DROPS, 0.08, 1),
-          name: '맑은 물빛',
-          spectrum: Array(BAND_COUNT).fill(0.93)
-        };
-      }
-
-      let spectrum = weightedLogs.map(v => Math.exp(v / pigmentWeight));
-
-      // 어린이의 직관과 실제 물감의 탁해짐을 같이 살리기 위한 작은 보정.
-      // 기본은 흡수율 기반 혼합이고, 특정 조합은 작가 팔레트처럼 살짝 방향을 잡아준다.
-      const has = (id) => (counts[id] || 0) > 0;
-      const warm = (counts.red || 0) + (counts.scarlet || 0) + (counts.orange || 0);
-      const yellows = (counts.yellow || 0) + (counts.lime || 0);
-      const blues = (counts.blue || 0) + (counts.sky || 0) + (counts.navy || 0);
-      const greens = (counts.green || 0) + (counts.mint || 0);
-      const purples = (counts.purple || 0) + (counts.pink || 0);
-      const totalPigmentDrops = drops.length - water;
-
-      function blendToward(targetSpectrum, amount) {
-        spectrum = spectrum.map((v, i) => lerp(v, targetSpectrum[i], amount));
-      }
-
-      if (yellows && blues && warm === 0 && purples === 0) {
-        blendToward(PIGMENTS.green.spectrum, 0.22);
-      }
-      if (warm && yellows && blues === 0 && greens === 0 && purples === 0) {
-        blendToward(PIGMENTS.orange.spectrum, 0.18);
-      }
-      if ((has('red') || has('scarlet') || has('pink')) && blues && yellows === 0 && greens === 0) {
-        blendToward(PIGMENTS.purple.spectrum, 0.18);
-      }
-      if ((warm && greens) || (warm && blues && yellows) || (totalPigmentDrops >= 5 && Object.keys(counts).filter(id => !PIGMENTS[id].isWater && counts[id]).length >= 4)) {
-        blendToward(PIGMENTS.brown.spectrum, 0.24);
-      }
-
+      const waterDrops = counts.water || 0;
       const whiteDrops = counts.white || 0;
       const blackDrops = counts.black || 0;
-      const dilution = water * 2.25 + whiteDrops * 0.28;
-      const pigmentConcentration = pigmentWeight / (pigmentWeight + dilution);
-      const waterLift = water > 0 ? clamp(1 - pigmentConcentration, 0, 0.86) : 0;
-
-      spectrum = spectrum.map((band, i) => {
-        const paperWhite = 0.97;
-        const lifted = paperWhite - pigmentConcentration * (paperWhite - band);
-        const waterySparkle = water > 0 ? 0.015 * Math.sin(i * 1.7 + drops.length) : 0;
-        return clamp(lerp(band, lifted, waterLift) + waterySparkle);
+      const colorDrops = drops.filter(id => {
+        const p = PIGMENTS[id];
+        return p && !p.isWater && !p.isWhite && !p.isBlack;
       });
+      const uniqueColors = [...new Set(colorDrops)];
 
-      let rgb = spectrumToRgb(spectrum);
+      let rgb;
+      let baseColorWeight = 0;
 
-      // 흰색은 파스텔화, 검정은 명도와 채도를 낮춰준다.
-      if (whiteDrops > 0) {
-        const t = clamp(whiteDrops / (totalPigmentDrops + whiteDrops + 1), 0, 0.48);
-        rgb = { r: lerp(rgb.r, 1, t), g: lerp(rgb.g, 1, t), b: lerp(rgb.b, 1, t) };
+      if (colorDrops.length > 0) {
+        const entries = colorDrops.map(id => {
+          const p = PIGMENTS[id];
+          const weight = p.strength || 1;
+          baseColorWeight += weight;
+          return { rgb: hexToRgbFloat(p.ui), weight };
+        });
+
+        rgb = uniqueColors.length === 1
+          ? hexToRgbFloat(PIGMENTS[uniqueColors[0]].ui)   // 순수 한 색은 팔레트 색 그대로!
+          : mixByOpticalDensity(entries);
+
+        const count = (id) => counts[id] || 0;
+        const redish = count('red') + count('scarlet') + count('pink');
+        const warm = redish + count('orange');
+        const yellowish = count('yellow') + count('lime');
+        const bluish = count('blue') + count('sky') + count('navy');
+        const greenish = count('green') + count('mint');
+        const purplish = count('purple');
+
+        const nudgeToward = (id, amount) => {
+          rgb = lerpRgb(rgb, hexToRgbFloat(PIGMENTS[id].ui), amount);
+        };
+
+        // 실제 물감의 대표적인 방향성: 빨+노=주황, 노+파=초록, 빨/분홍+파=보라.
+        // 보정량은 작게 두어서 "게임다운 선명함"과 "물감다운 탁함"이 같이 살아난다.
+        if (yellowish && bluish && !warm && !purplish) nudgeToward(greenish ? 'green' : 'green', 0.30);
+        if (warm && yellowish && !bluish && !greenish && !purplish) nudgeToward('orange', 0.24);
+        if (redish && bluish && !yellowish && !greenish) nudgeToward('purple', 0.30);
+        if ((warm && greenish) || (count('orange') && bluish) || (redish && greenish)) nudgeToward('brown', 0.34);
+        if (uniqueColors.length >= 4) nudgeToward('brown', 0.18);
+      } else if (whiteDrops || blackDrops) {
+        const whitePower = whiteDrops * 1.15;
+        const blackPower = blackDrops * 4.2; // 검정 물감은 아주 강하다
+        const t = blackPower / Math.max(0.0001, whitePower + blackPower);
+        rgb = lerpRgb(PAPER_WHITE_RGB, TRUE_BLACK_RGB, clamp(t));
+      } else {
+        const opacity = clamp(0.18 + waterDrops * 0.018, 0.18, 0.32);
+        return {
+          rgb: PAINT_WATER_RGB,
+          opacity,
+          fill: clamp(drops.length / MAX_DROPS, 0.08, 1),
+          name: '맑은 물빛'
+        };
       }
-      if (blackDrops > 0) {
-        const t = clamp(blackDrops / (totalPigmentDrops + 1) * 0.52, 0, 0.65);
-        rgb = { r: rgb.r * (1 - t), g: rgb.g * (1 - t), b: rgb.b * (1 - t) };
+
+      // 흰색은 불투명한 물감이라 색을 파스텔 쪽으로 끌고 간다.
+      if (whiteDrops > 0 && colorDrops.length > 0) {
+        const whitePower = whiteDrops * 1.18;
+        const t = clamp(whitePower / (baseColorWeight + whitePower + blackDrops * 0.25), 0, 0.84);
+        rgb = lerpRgb(rgb, PAPER_WHITE_RGB, t);
       }
 
-      const opacity = clamp(0.36 + pigmentConcentration * 0.63 + whiteDrops * 0.035, 0.26, 0.98);
+      // 검정은 실제 물감처럼 힘이 세게 작동한다.
+      if (blackDrops > 0 && colorDrops.length > 0) {
+        const blackPower = blackDrops * 2.35;
+        const t = clamp(blackPower / (baseColorWeight + whiteDrops * 0.75 + blackPower), 0, 0.92);
+        rgb = lerpRgb(rgb, TRUE_BLACK_RGB, t);
+      }
+
+      // 물은 색상 자체를 크게 바꾸지 않고, 투명도와 약간의 밝기만 바꾼다.
+      if (waterDrops > 0) {
+        const paintDrops = Math.max(1, drops.length - waterDrops);
+        const t = clamp(waterDrops * 0.28 / (paintDrops + waterDrops * 0.55), 0, 0.46);
+        rgb = lerpRgb(rgb, PAINT_WATER_RGB, t);
+      }
+
+      const pigmentDrops = drops.length - waterDrops;
+      const pigmentConcentration = pigmentDrops / Math.max(1, pigmentDrops + waterDrops * 1.9);
+      const opacity = colorDrops.length || whiteDrops || blackDrops
+        ? clamp(0.62 + pigmentConcentration * 0.37, 0.36, 0.99)
+        : clamp(0.18 + waterDrops * 0.018, 0.18, 0.32);
       const fill = clamp(drops.length / MAX_DROPS, 0.09, 1);
-      const name = makeColorName(rgb, drops.length);
-      return { rgb, opacity, fill, name, spectrum };
+
+      let name;
+      if (uniqueColors.length === 1 && !whiteDrops && !blackDrops) {
+        const base = PIGMENTS[uniqueColors[0]].name;
+        name = waterDrops ? `연한 ${base} 물감색` : `${base} 물감색`;
+      } else if (!uniqueColors.length && whiteDrops && !blackDrops) {
+        name = waterDrops ? '촉촉한 흰색 물감' : '흰색 물감';
+      } else if (!uniqueColors.length && blackDrops && !whiteDrops) {
+        name = waterDrops ? '묽은 검정 물감' : '검정 물감';
+      } else {
+        name = makeColorName(rgb, drops.length);
+      }
+
+      return { rgb, opacity, fill, name };
     }
 
     function recipeColor(recipe) {
@@ -992,7 +1066,8 @@
     // --- Three.js scene ---
     const scene = new THREE.Scene();
     scene.background = new THREE.Color(0xa9e8ff);
-    scene.fog = new THREE.FogExp2(0xa9e8ff, 0.018);
+    // 색 정확도를 위해 안개 효과를 끔: 멀리 있는 물감이 하늘색과 섞여 탁해지지 않게 함
+    scene.fog = null;
 
     const camera = new THREE.PerspectiveCamera(50, window.innerWidth / window.innerHeight, 0.1, 1000);
     const renderer = new THREE.WebGLRenderer({ antialias: true, alpha: false });
@@ -1091,15 +1166,25 @@
     const particles = [];
     const sparkles = [];
 
+    function threeColorFromSrgb(rgb) {
+      const color = new THREE.Color();
+      color.setRGB(clamp(rgb.r), clamp(rgb.g), clamp(rgb.b), THREE.SRGBColorSpace);
+      return color;
+    }
+
+    function applySrgbColor(material, rgb) {
+      material.color.copy(threeColorFromSrgb(rgb));
+    }
+
     const B_RADIUS = 1.15;
     const glassMaterial = new THREE.MeshPhysicalMaterial({
       color: 0xffffff,
       transparent: true,
-      opacity: 0.18,
-      roughness: 0.08,
+      opacity: 0.08,
+      roughness: 0.05,
       metalness: 0,
-      transmission: 0.32,
-      thickness: 0.15,
+      transmission: 0.18,
+      thickness: 0.08,
       side: THREE.DoubleSide,
       depthWrite: false
     });
@@ -1136,32 +1221,27 @@
       lowerRim.scale.set(0.95, 0.95, 0.95);
       group.add(lowerRim);
 
-      const liquidMat = new THREE.MeshPhysicalMaterial({
+      const liquidMat = new THREE.MeshStandardMaterial({
         color: 0xffffff,
         transparent: true,
         opacity: 0,
-        roughness: 0.18,
-        metalness: 0.0,
-        clearcoat: 0.35,
-        clearcoatRoughness: 0.2,
+        roughness: 0.42,
+        metalness: 0,
         emissive: 0x000000,
-        emissiveIntensity: 0.08
+        emissiveIntensity: 0.07
       });
       const liquid = new THREE.Mesh(liquidGeo, liquidMat);
       liquid.position.y = -1.58;
       liquid.scale.y = 0.001;
-      liquid.castShadow = true;
-      liquid.receiveShadow = true;
+      // 물감 자체가 선반 그림자를 받아 탁해지지 않도록 끔
+      liquid.castShadow = false;
+      liquid.receiveShadow = false;
       group.add(liquid);
 
-      const surfaceMat = new THREE.MeshPhysicalMaterial({
+      const surfaceMat = new THREE.MeshBasicMaterial({
         color: 0xffffff,
         transparent: true,
         opacity: 0,
-        roughness: 0.05,
-        metalness: 0,
-        clearcoat: 1,
-        clearcoatRoughness: 0.05,
         side: THREE.DoubleSide
       });
       const surface = new THREE.Mesh(surfaceGeo, surfaceMat);
@@ -1269,12 +1349,14 @@
       data.mix = mixed;
       data.fillScale = mixed.fill;
 
-      data.liquid.material.color.setRGB(mixed.rgb.r, mixed.rgb.g, mixed.rgb.b);
+      applySrgbColor(data.liquid.material, mixed.rgb);
       data.liquid.material.opacity = mixed.opacity;
-      data.liquid.material.emissive.setRGB(mixed.rgb.r * 0.22, mixed.rgb.g * 0.22, mixed.rgb.b * 0.22);
+      data.liquid.material.emissive.copy(threeColorFromSrgb(mixed.rgb));
+      data.liquid.material.emissiveIntensity = 0.07;
 
-      data.surface.material.color.setRGB(clamp(mixed.rgb.r + 0.07), clamp(mixed.rgb.g + 0.07), clamp(mixed.rgb.b + 0.07));
-      data.surface.material.opacity = clamp(mixed.opacity + 0.1, 0, 0.96);
+      const surfaceRgb = lerpRgb(mixed.rgb, { r: 1, g: 1, b: 1 }, mixed.opacity < 0.52 ? 0.13 : 0.055);
+      applySrgbColor(data.surface.material, surfaceRgb);
+      data.surface.material.opacity = clamp(mixed.opacity + 0.06, 0, 0.98);
       data.meniscus.material.color.copy(data.surface.material.color);
       data.meniscus.material.opacity = data.surface.material.opacity;
 
@@ -1297,7 +1379,9 @@
       data.drops = [];
       data.mix = mixDrops([]);
       data.fillScale = 0.001;
+      applySrgbColor(data.liquid.material, { r: 1, g: 1, b: 1 });
       data.liquid.material.opacity = 0;
+      applySrgbColor(data.surface.material, { r: 1, g: 1, b: 1 });
       data.surface.material.opacity = 0;
       data.liquid.scale.y = 0.001;
       data.surface.position.y = -1.55;
@@ -1416,7 +1500,7 @@
       group.getWorldPosition(world);
       const color = pigment.isWater ? hexToRgbFloat('#bff3ff') : hexToRgbFloat(pigment.ui);
       const mat = new THREE.MeshStandardMaterial({
-        color: new THREE.Color(color.r, color.g, color.b),
+        color: threeColorFromSrgb(color),
         roughness: 0.22,
         metalness: 0,
         transparent: true,
@@ -1441,7 +1525,7 @@
       group.getWorldPosition(world);
       const colorRgb = pigment.isWater ? { r: 0.75, g: 0.95, b: 1 } : hexToRgbFloat(pigment.ui);
       const mat = new THREE.MeshStandardMaterial({
-        color: new THREE.Color(colorRgb.r, colorRgb.g, colorRgb.b),
+        color: threeColorFromSrgb(colorRgb),
         transparent: true,
         opacity: 0.72,
         roughness: 0.3
@@ -1464,7 +1548,7 @@
       const data = group.userData;
       const world = new THREE.Vector3();
       group.getWorldPosition(world);
-      const color = new THREE.Color(clamp(rgb.r + 0.25), clamp(rgb.g + 0.25), clamp(rgb.b + 0.25));
+      const color = threeColorFromSrgb({ r: clamp(rgb.r + 0.25), g: clamp(rgb.g + 0.25), b: clamp(rgb.b + 0.25) });
       for (let i = 0; i < count; i++) {
         const geo = new THREE.TetrahedronGeometry(0.055 + Math.random() * 0.045);
         const mat = new THREE.MeshStandardMaterial({ color, emissive: color, emissiveIntensity: 0.9, roughness: 0.28, transparent: true, opacity: 1 });
